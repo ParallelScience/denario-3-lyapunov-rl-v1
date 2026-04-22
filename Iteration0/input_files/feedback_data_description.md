@@ -1,0 +1,3 @@
+The failure of the agents to achieve stable upright balancing is directly attributable to the dataset description's constraint: "The native Gymnasium reward is replaced entirely by the Lyapunov-based reward." 
+
+This constraint limits the analysis by creating a potential-based reward function that acts as a telescoping sum. Because the total return depends only on the difference between the initial and final states, the agent lacks a continuous incentive to maintain the goal state once reached. This explains the observed "stabilization paradox," where the agents reach the goal region but fail to maintain balance, as the reward signal provides no local gradient for stabilization at the equilibrium.
