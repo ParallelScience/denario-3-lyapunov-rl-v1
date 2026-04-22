@@ -1,24 +1,22 @@
-# filename: codebase/step_3.py
+# filename: codebase/step_2.py
 import sys
 import os
 sys.path.insert(0, os.path.abspath("codebase"))
 sys.path.insert(0, "/home/node/data/compsep_data/")
-os.environ['OMP_NUM_THREADS'] = '1'
-os.environ['MKL_NUM_THREADS'] = '1'
 import numpy as np
 import torch
 import gymnasium as gym
-import multiprocessing as mp
 import pickle
-from step_1 import SAC, SACArgs, ReplayMemory, LyapunovRewardWrapper, compute_phi_tensor
-def train_agent_B(seed):
-    torch.set_num_threads(1)
-    condition = 'condition_B'
+import gc
+from step_1 import SAC, SACArgs, ReplayMemory, LyapunovRewardWrapper
+def train_agent(args_tuple):
+    seed, condition = args_tuple
     env_name = 'Pendulum-v1'
     env = gym.make(env_name)
     eval_env = gym.make(env_name)
-    env = LyapunovRewardWrapper(env)
-    eval_env = LyapunovRewardWrapper(eval_env)
+    if condition == 'condition_A':
+        env = LyapunovRewardWrapper(env)
+        eval_env = LyapunovRewardWrapper(eval_env)
     env.action_space.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -30,19 +28,9 @@ def train_agent_B(seed):
     args.hidden_size = 256
     args.lr = 3e-4
     args.automatic_entropy_tuning = True
-    args.structured = True
+    args.structured = False
     agent = SAC(env.observation_space.shape[0], env.action_space, args)
     memory = ReplayMemory(100000, env.observation_space.shape[0], env.action_space.shape[0])
-    obs, _ = env.reset(seed=seed)
-    obs_tensor = torch.FloatTensor(obs).unsqueeze(0).to(agent.device)
-    action_tensor = torch.FloatTensor(env.action_space.sample()).unsqueeze(0).to(agent.device)
-    with torch.no_grad():
-        q1, q2 = agent.critic(obs_tensor, action_tensor)
-        phi = compute_phi_tensor(obs_tensor)
-    print('Seed ' + str(seed) + ' Initialization Check:')
-    print('  Phi(s): ' + str(round(phi.item(), 4)))
-    print('  Q1(s,a): ' + str(round(q1.item(), 4)) + ' (Diff: ' + str(round(abs(q1.item() - phi.item()), 4)) + ')')
-    print('  Q2(s,a): ' + str(round(q2.item(), 4)) + ' (Diff: ' + str(round(abs(q2.item() - phi.item()), 4)) + ')')
     total_numsteps = 0
     updates = 0
     num_steps = 100000
@@ -85,30 +73,36 @@ def train_agent_B(seed):
             upright_frac = upright_steps / 1000.0
             logs['eval_steps'].append(total_numsteps)
             logs['eval_upright_fractions'].append(upright_frac)
-        if total_numsteps % 20000 == 0:
-            print('Task ' + condition + ' seed ' + str(seed) + ': ' + str(total_numsteps) + '/' + str(num_steps) + ' steps')
-    data_dir = 'data'
-    torch.save(agent.critic.state_dict(), os.path.join(data_dir, condition + '_critic_seed_' + str(seed) + '.pth'))
-    torch.save(agent.policy.state_dict(), os.path.join(data_dir, condition + '_policy_seed_' + str(seed) + '.pth'))
+            print('Condition: ' + condition + ', Seed: ' + str(seed) + ', Steps: ' + str(total_numsteps) + ', Upright Frac: ' + str(upright_frac))
+    torch.save(agent.critic.state_dict(), os.path.join('data', condition + '_critic_seed_' + str(seed) + '.pth'))
+    torch.save(agent.policy.state_dict(), os.path.join('data', condition + '_policy_seed_' + str(seed) + '.pth'))
     avg_last_10_rewards = np.mean(logs['episode_rewards'][-10:]) if len(logs['episode_rewards']) >= 10 else np.mean(logs['episode_rewards'])
     print('Completed Condition: ' + condition + ', Seed: ' + str(seed) + ' | Final Avg Reward (last 10 eps): ' + str(round(avg_last_10_rewards, 2)) + ' | Final Upright Fraction: ' + str(logs['eval_upright_fractions'][-1]))
     return condition, seed, logs
 if __name__ == '__main__':
-    tasks = list(range(5))
-    print('Starting training for Condition B (5 tasks total, parallel)...')
-    ctx = mp.get_context('spawn')
-    with ctx.Pool(processes=5) as pool:
-        results = pool.map(train_agent_B, tasks)
-    print('Training completed. Saving logs...')
-    all_logs = {'condition_B': {}}
+    tasks = []
+    for seed in range(5):
+        tasks.append((seed, 'vanilla'))
+        tasks.append((seed, 'condition_A'))
+    print('Starting training for Vanilla SAC and Condition A (10 tasks total, sequentially)...')
+    results = []
+    for task in tasks:
+        print('\nStarting task: Condition=' + task[1] + ', Seed=' + str(task[0]))
+        res = train_agent(task)
+        results.append(res)
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    print('\nTraining completed. Saving logs...')
+    all_logs = {'vanilla': {}, 'condition_A': {}}
     for condition, seed, logs in results:
         all_logs[condition][seed] = logs
-    with open(os.path.join('data', 'step_3_logs.pkl'), 'wb') as f:
+    with open(os.path.join('data', 'step_2_logs.pkl'), 'wb') as f:
         pickle.dump(all_logs, f)
-    print('Logs saved to data/step_3_logs.pkl')
-    condition = 'condition_B'
-    final_rewards = [np.mean(all_logs[condition][seed]['episode_rewards'][-10:]) for seed in range(5)]
-    final_uprights = [all_logs[condition][seed]['eval_upright_fractions'][-1] for seed in range(5)]
-    print('\nSummary for ' + condition + ':')
-    print('Mean Final Avg Reward (last 10 eps): ' + str(round(np.mean(final_rewards), 2)) + ' +/- ' + str(round(np.std(final_rewards), 2)))
-    print('Mean Final Upright Fraction: ' + str(round(np.mean(final_uprights), 4)) + ' +/- ' + str(round(np.std(final_uprights), 4)))
+    print('Logs saved to data/step_2_logs.pkl')
+    for condition in ['vanilla', 'condition_A']:
+        final_rewards = [np.mean(all_logs[condition][seed]['episode_rewards'][-10:]) for seed in range(5)]
+        final_uprights = [all_logs[condition][seed]['eval_upright_fractions'][-1] for seed in range(5)]
+        print('\nSummary for ' + condition + ':')
+        print('Mean Final Avg Reward (last 10 eps): ' + str(round(np.mean(final_rewards), 2)) + ' +/- ' + str(round(np.std(final_rewards), 2)))
+        print('Mean Final Upright Fraction: ' + str(round(np.mean(final_uprights), 4)) + ' +/- ' + str(round(np.std(final_uprights), 4)))
