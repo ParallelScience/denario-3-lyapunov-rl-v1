@@ -1,34 +1,39 @@
 1. **Environment and Reward Configuration**:
-   - Utilize `Pendulum-v1`. Implement a reward wrapper that defines the total reward as the sum of the native environment reward and the potential-based shaping term: $R_{total} = R_{native} + (\gamma \Phi(s_{t+1}) - \Phi(s_t))$, where $\Phi(s) = (1 - \cos\theta) + 0.5\dot\theta^2$.
-   - Ensure $\theta$ is recovered using `atan2(sin θ, cos θ)` to maintain consistency across all calculations.
+   - Utilize `Pendulum-v1`. Implement a reward wrapper that replaces the native reward with the Lyapunov-based reward:
+     $$R_t = \Phi(s_t) - \Phi(s_{t+1}), \quad \Phi(s) = (1 - \cos\theta) + 0.5\dot\theta^2$$
+   - Recover $\theta$ using `atan2(sin θ, cos θ)` from the state representation.
 
-2. **Baseline and Structured Critic Architectures**:
-   - **Condition A (Baseline)**: Standard SAC critic $V_\psi(s)$ (MLP).
-   - **Condition B (Structured)**: Critic defined as $V(s) = \Phi_\alpha(s) + f_\theta(s)$, where $\Phi_\alpha(s) = \alpha(1 - \cos\theta) + 0.5\dot\theta^2$.
-   - **Initialization**: For $f_\theta(s)$, initialize the final layer weights and biases to zero. This ensures $V(s) = \Phi_\alpha(s)$ at the start of training.
+2. **PPO Implementation**:
+   - Implement Proximal Policy Optimization (PPO) with a shared or separate actor-critic architecture.
+   - The critic explicitly estimates the state value function $V(s)$ — not $Q(s,a)$ — making it a natural fit for the structured decomposition below.
+   - Use standard PPO hyperparameters: clip ratio $\epsilon=0.2$, entropy bonus, GAE ($\lambda=0.95$), $\gamma=0.99$.
 
-3. **Robustness Testing (Model Mismatch)**:
-   - Conduct experiments with $\alpha \in \{0.5, 1.0, 2.0\}$ for Condition B.
-   - Keep the reward shaping term in Step 1 fixed to the "true" physics ($\alpha=1.0$) across all experiments to isolate the effect of the structural prior in the critic from the shaping signal.
+3. **Condition A — Direct Value Learning (Baseline)**:
+   - Standard PPO critic: a 2-layer MLP that outputs $V(s)$ directly.
+   - Trained end-to-end on the Lyapunov reward.
 
-4. **Ground Truth Value Function ($V^*$)**:
-   - Generate a high-fidelity $V^*(s)$ by training a standard SAC agent for 500,000 steps. To ensure robustness, average the value function estimates across 5 independent seeds.
-   - This $V^*(s)$ serves as the ground truth for calculating the "Residual Gap" for both Condition A ($V(s) - \Phi(s)$) and Condition B ($f_\theta(s)$).
+4. **Condition B — Structured Value Function**:
+   - The PPO critic is decomposed as $V(s) = \Phi(s) + f_\theta(s)$.
+   - The network outputs only the residual $f_\theta(s)$; the analytic $\Phi(s)$ is added to the output.
+   - **Initialization**: set the final layer weights and biases of $f_\theta$ to zero, so $V(s) \approx \Phi(s)$ at the start of training.
+   - The policy (actor) is identical in both conditions; only the critic architecture differs.
 
 5. **Training Protocol**:
-   - Train all agents for 100,000 environment steps using 5 random seeds per configuration.
-   - Maintain consistent hyperparameters (learning rate, batch size, $\gamma$) across all conditions. Monitor gradient magnitudes of $f_\theta$ early in training to ensure the network is actively learning the residual.
+   - Train both conditions for 100,000 environment steps across 5 random seeds each.
+   - Use identical hyperparameters for both conditions.
+   - Log episode returns (Lyapunov reward), upright stability, and critic loss at each update.
 
-6. **Quantitative Residual Analysis**:
-   - Define a fixed grid of the state space ($\theta \in [-\pi, \pi], \dot\theta \in [-8, 8]$).
-   - At periodic intervals, compute the Mean Squared Error (MSE) between the learned residual and the target residual ($V^*(s) - \Phi(s)$).
-   - Track this MSE over training time to quantify how effectively the neural network captures dynamics not represented by the prior.
+6. **Value Function Analysis**:
+   - Evaluate the learned $V(s)$ for both conditions on a 2D grid of states ($\theta \in [-\pi, \pi]$, $\dot\theta \in [-8, 8]$).
+   - Plot heatmaps of: (a) analytic $\Phi(s)$, (b) learned $V_A(s)$, (c) learned $V_B(s)$, (d) learned residual $f_\theta(s)$.
+   - Compare the residual $f_\theta(s)$ to the theoretical expectation $V^*(s) - \Phi(s)$ to assess whether the network learns the "correction" beyond the Lyapunov prior.
 
-7. **Performance Evaluation**:
-   - **Convergence Rate**: Measure the MSE of the learned value function $V(s)$ relative to $V^*(s)$ over training steps.
-   - **Stabilization Error**: Calculate the mean squared angular distance from the upright equilibrium ($\theta=0, \dot\theta=0$) during the final 10,000 steps of training, using the native state representation.
-   - **Upright Stability**: Measure the fraction of time steps where $|\theta| < 0.1$ rad during evaluation roll-outs.
+7. **Performance Metrics**:
+   - Learning curves: mean ± std Lyapunov reward over training steps (5 seeds).
+   - Sample efficiency: steps to reach 90% of maximum average reward.
+   - Upright stability: fraction of evaluation steps with $|\theta| < 0.1$ rad.
+   - Critic convergence: MSE of $V(s)$ against a high-fidelity $V^*$ baseline (trained for 500k steps) over training time.
 
-8. **Comparative Statistical Analysis**:
-   - Compare convergence rates and final stabilization errors between Condition A and Condition B using confidence intervals from the 5 seeds.
-   - Analyze if the structured critic with a misspecified $\alpha$ performs worse than the baseline to determine if the prior acts as a harmful bias when incorrect.
+8. **Statistical Comparison**:
+   - Compare Condition A vs. Condition B on all metrics using confidence intervals across 5 seeds.
+   - Assess whether the Lyapunov structural prior accelerates critic convergence even when the policy fails to reach the upright position.
