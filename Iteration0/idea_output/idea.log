@@ -1,0 +1,1040 @@
+
+###### PROMPT BEGINS ########
+Human: 
+**Role**: You are a Senior Scientific Researcher.
+**Objective**: Based on the provided dataset description and potential previous ideas, generate 10 distinct, high-impact research ideas for a scientific project. 
+
+**Task**: 
+Generate 10 research ideas that could lead to meaningful scientific discovery. These ideas must be diverse in their approach to the data and must be different to previous existing ideas.
+
+**Operational Constraints**:
+- We are trying to sample the ideas space as widely as possible. Thus, if there are existing ideas, make the 10 ideas as different as possible from the existing ones.
+- The 10 ideas should also be as different from each other as possible.
+- **Conciseness**: Each idea should be 3-4 sentences max. Focus on the "Research Question," not the execution.
+- **No Methodology**: Do not include plans, code, or specific algorithms. Only state the *Research Objective*.
+- **Consistency**: The ideas must strictly adhere to the constraints and physical reality described in the data description.
+- **Zero Redundancy**: If two ideas feel similar, discard one and find a new scientific angle.
+- Each idea must consist of a title and a brief description of it.
+
+Data description:
+# Lyapunov-Based Reward Shaping for Reinforcement Learning
+
+## Overview
+
+This project investigates Lyapunov-based reward shaping in reinforcement learning, where the reward at each timestep is defined as the decrease in an analytically given Lyapunov function:
+
+    R_t = Φ(s_t) - Φ(s_{t+1})
+
+The core research question is whether structuring the value function as V(s) = Φ(s) + f(s) — where only the residual f(s) is learned — improves sample efficiency, stability, and policy quality compared to learning V(s) directly from scratch.
+
+## Environment
+
+**Gymnasium Pendulum-v1** — a standard continuous-control benchmark.
+
+- **State space:** s = (cos θ, sin θ, θ̇) ∈ [-1,1] × [-1,1] × [-8,8]
+- **Action space:** torque u ∈ [-2, 2] (continuous)
+- **Goal:** stabilize the pendulum at the upright position (θ = 0)
+- **Episode length:** 200 steps
+
+The native Gymnasium reward is replaced entirely by the Lyapunov-based reward defined below.
+
+## Lyapunov Function
+
+The Lyapunov function is the **mechanical energy of the pendulum** relative to the upright equilibrium:
+
+    Φ(s) = (1 - cos θ) + 0.5 * θ̇²
+
+Where:
+- θ = angle from upright (recovered from state as θ = atan2(sin θ, cos θ))
+- θ̇ = angular velocity (third component of state)
+- Φ(s) = 0 at the upright equilibrium (θ=0, θ̇=0)
+- Φ(s) > 0 everywhere else (positive definite)
+
+This is a valid Lyapunov candidate for the uncontrolled pendulum dynamics. The reward R_t = Φ(s_t) - Φ(s_{t+1}) is positive when the agent drives the system toward the equilibrium.
+
+## Research Conditions
+
+Two experimental conditions are compared using Soft Actor-Critic (SAC):
+
+### Condition A: Direct Value Learning
+- Standard SAC with the Lyapunov reward R_t = Φ(s_t) - Φ(s_{t+1})
+- Value function V(s) learned entirely from data (standard neural network critic)
+- Baseline: represents the standard approach to reward shaping
+
+### Condition B: Structured Value Function
+- Same SAC algorithm and Lyapunov reward
+- Value function decomposed as: V(s) = Φ(s) + f_θ(s)
+- Only the residual f_θ(s) is learned by the neural network
+- Critic network outputs f_θ(s); total value = Φ(s) + f_θ(s)
+- Hypothesis: initializing V with the physically meaningful Φ should improve sample efficiency and stability
+
+## Implementation Notes
+
+- Install gymnasium with: `pip install gymnasium[classic_control]`
+- SAC implementation: use stable-baselines3 or a custom PyTorch SAC
+- Custom reward wrapper: override the environment reward with R_t = Φ(s_t) - Φ(s_{t+1})
+- For Condition B, modify the critic network to output f_θ(s) and add Φ(s) analytically
+- Training: 100,000 environment steps per run, 5 random seeds each condition
+- Evaluation: average return (using Lyapunov reward), upright time, and convergence speed
+- Hardware: GPU available (NVIDIA RTX PRO 6000, use device='cuda')
+
+## Evaluation Metrics
+
+1. **Learning curves**: cumulative Lyapunov reward vs. environment steps (5 seeds, mean ± std)
+2. **Sample efficiency**: steps to reach 90% of maximum average reward
+3. **Upright stability**: fraction of time steps in upright region (|θ| < 0.1 rad) after training
+4. **Value function quality**: compare learned V(s) vs. true Φ(s) on a grid of states
+5. **Policy quality**: render/evaluate final policy qualitatively
+
+## File Paths
+
+No pre-existing data files. All data is generated online via environment interaction.
+The environment is instantiated in code as: `gymnasium.make('Pendulum-v1')`
+
+
+
+
+
+
+
+
+Respond in the following format:
+
+\\begin{IDEAS}
+<IDEAS>
+\\end{IDEAS}
+
+In <IDEAS>, put the ideas you have generated. 
+
+###### PROMPT ENDS ########
+
+\begin{IDEAS}
+
+1. **Dynamic Weighting of Residual Components**
+Investigate if scaling the analytical component $\Phi(s)$ by a learnable parameter $\alpha$ allows the agent to adapt to non-conservative forces or model inaccuracies. This research asks if a "soft" integration of the Lyapunov function provides better flexibility than the rigid structural assumption $V(s) = \Phi(s) + f(s)$.
+
+2. **Lyapunov-Induced Policy Regularization**
+Examine if the gradient of the Lyapunov function can be used as a prior to constrain the actor's action space. The objective is to determine if restricting exploratory updates to directions that satisfy the Lyapunov descent condition accelerates policy convergence.
+
+3. **Generalization Across Mass/Length Variations**
+Assess whether the structured value function $V(s) = \Phi(s) + f(s)$ maintains higher robustness when pendulum physical parameters (mass, length) are perturbed post-training. This evaluates if the analytical prior acts as a structural anchor that prevents the learned residual from overfitting to specific dynamics.
+
+4. **Curriculum Evolution of Reward Shaping**
+Explore a transition schedule where the weight of the Lyapunov reward is decayed as the residual $f(s)$ matures. The research objective is to see if early-stage reliance on physics-based priors followed by late-stage reliance on learned data leads to superior final-policy precision.
+
+5. **Stability Analysis via Value Function Curvature**
+Analyze the Hessian of the learned residual $f(s)$ to quantify how much the agent "corrects" the physical model. This study aims to determine if higher curvature in the learned component correlates with higher instability or if it signifies successful adaptation to complex nonlinearities.
+
+6. **Sensitivity to Lyapunov Function Imperfection**
+Introduce intentional biases or errors into the analytical $\Phi(s)$ to measure the resilience of the structured value function approach. The goal is to identify the "break-point" at which an inaccurate physical prior becomes more detrimental than learning from scratch.
+
+7. **Sparse Reward Integration and Lyapunov Guidance**
+Test whether the Lyapunov-based reward can serve as a dense "shaping signal" that allows the agent to solve tasks where the true goal is only reachable through rare state transitions. This examines if the physical prior effectively mitigates the exploration problem in environments with sparse terminal rewards.
+
+8. **Epistemic Uncertainty and Residual Learning**
+Use the residual $f(s)$ to model aleatoric uncertainty by incorporating a variance-predicting head into the critic. The objective is to determine if the structured value function allows the agent to better distinguish between states where the physical model is sufficient and states where learning is critical.
+
+9. **Transfer Learning across Lyapunov Candidates**
+Compare the performance of the structured approach when using different Lyapunov candidates, such as total energy versus a purely kinematic-based potential. This research identifies which mathematical representations of "stability" provide the most effective inductive bias for reinforcement learning.
+
+10. **Multi-Agent Coordination via Collective Lyapunov Potentials**
+Extend the Lyapunov-based shaping to a multi-pendulum system to observe if shared potentials facilitate synchronized stabilization. The research question is whether a global Lyapunov function can act as a coordination mechanism that reduces the complexity of learning joint control policies.
+
+\end{IDEAS}
+
+
+###### PROMPT BEGINS ########
+Human: 
+**Role**: Senior Scientific Lead and Final Decision Maker.
+**Objective**: Review the ideas prioritized by the three independent Reviewer Agents and select the single most promising research project to proceed to the implementation phase.
+
+**Context**: 
+A pool of 10 initial ideas was generated. Three independent agents have evaluated those ideas and identified their top selections (provided below). Your role is to serve as the final filter, selecting the "Best of the Best" based on scientific merit and the constraints of the dataset.
+
+**Evaluation Criteria**:
+1. **Scientific Consensus**: Does an idea appear as a top choice for multiple reviewers?
+2. **Execution Readiness**: Given the 'Data Description,' which idea is most likely to produce a valid, non-erroneous scientific result?
+3. **Strategic Impact**: Which project offers the most meaningful contribution to the Foundation's research goals?
+4. **Novelty vs Previous Work**: The selected idea should be as different as possible from any previous ideas to ensure new scientific contributions.
+
+**Operational Constraints**:
+- **Selection Only**: You must select exactly one idea.
+- **Strict Fidelity**: Do not modify, rephrase, or correct the original text of the idea. 
+- **Zero Commentary**: Do not justify your decision, provide pros/cons, or offer any introductory text.
+- **Output Integrity**: Provide **only** the text of the selected idea within the required tags.
+- The selected idea must contain a title and a description of the idea
+
+Data description:
+# Lyapunov-Based Reward Shaping for Reinforcement Learning
+
+## Overview
+
+This project investigates Lyapunov-based reward shaping in reinforcement learning, where the reward at each timestep is defined as the decrease in an analytically given Lyapunov function:
+
+    R_t = Φ(s_t) - Φ(s_{t+1})
+
+The core research question is whether structuring the value function as V(s) = Φ(s) + f(s) — where only the residual f(s) is learned — improves sample efficiency, stability, and policy quality compared to learning V(s) directly from scratch.
+
+## Environment
+
+**Gymnasium Pendulum-v1** — a standard continuous-control benchmark.
+
+- **State space:** s = (cos θ, sin θ, θ̇) ∈ [-1,1] × [-1,1] × [-8,8]
+- **Action space:** torque u ∈ [-2, 2] (continuous)
+- **Goal:** stabilize the pendulum at the upright position (θ = 0)
+- **Episode length:** 200 steps
+
+The native Gymnasium reward is replaced entirely by the Lyapunov-based reward defined below.
+
+## Lyapunov Function
+
+The Lyapunov function is the **mechanical energy of the pendulum** relative to the upright equilibrium:
+
+    Φ(s) = (1 - cos θ) + 0.5 * θ̇²
+
+Where:
+- θ = angle from upright (recovered from state as θ = atan2(sin θ, cos θ))
+- θ̇ = angular velocity (third component of state)
+- Φ(s) = 0 at the upright equilibrium (θ=0, θ̇=0)
+- Φ(s) > 0 everywhere else (positive definite)
+
+This is a valid Lyapunov candidate for the uncontrolled pendulum dynamics. The reward R_t = Φ(s_t) - Φ(s_{t+1}) is positive when the agent drives the system toward the equilibrium.
+
+## Research Conditions
+
+Two experimental conditions are compared using Soft Actor-Critic (SAC):
+
+### Condition A: Direct Value Learning
+- Standard SAC with the Lyapunov reward R_t = Φ(s_t) - Φ(s_{t+1})
+- Value function V(s) learned entirely from data (standard neural network critic)
+- Baseline: represents the standard approach to reward shaping
+
+### Condition B: Structured Value Function
+- Same SAC algorithm and Lyapunov reward
+- Value function decomposed as: V(s) = Φ(s) + f_θ(s)
+- Only the residual f_θ(s) is learned by the neural network
+- Critic network outputs f_θ(s); total value = Φ(s) + f_θ(s)
+- Hypothesis: initializing V with the physically meaningful Φ should improve sample efficiency and stability
+
+## Implementation Notes
+
+- Install gymnasium with: `pip install gymnasium[classic_control]`
+- SAC implementation: use stable-baselines3 or a custom PyTorch SAC
+- Custom reward wrapper: override the environment reward with R_t = Φ(s_t) - Φ(s_{t+1})
+- For Condition B, modify the critic network to output f_θ(s) and add Φ(s) analytically
+- Training: 100,000 environment steps per run, 5 random seeds each condition
+- Evaluation: average return (using Lyapunov reward), upright time, and convergence speed
+- Hardware: GPU available (NVIDIA RTX PRO 6000, use device='cuda')
+
+## Evaluation Metrics
+
+1. **Learning curves**: cumulative Lyapunov reward vs. environment steps (5 seeds, mean ± std)
+2. **Sample efficiency**: steps to reach 90% of maximum average reward
+3. **Upright stability**: fraction of time steps in upright region (|θ| < 0.1 rad) after training
+4. **Value function quality**: compare learned V(s) vs. true Φ(s) on a grid of states
+5. **Policy quality**: render/evaluate final policy qualitatively
+
+## File Paths
+
+No pre-existing data files. All data is generated online via environment interaction.
+The environment is instantiated in code as: `gymnasium.make('Pendulum-v1')`
+
+
+Ideas:
+Idea selected1: **Sensitivity to Lyapunov Function Imperfection**
+Introduce intentional biases or errors into the analytical $\Phi(s)$ to measure the resilience of the structured value function approach. The goal is to identify the "break-point" at which an inaccurate physical prior becomes more detrimental than learning from scratch.
+Idea selected2: **Sensitivity to Lyapunov Function Imperfection**
+Introduce intentional biases or errors into the analytical $\Phi(s)$ to measure the resilience of the structured value function approach. The goal is to identify the "break-point" at which an inaccurate physical prior becomes more detrimental than learning from scratch.
+Idea selected3: **Sensitivity to Lyapunov Function Imperfection**
+Introduce intentional biases or errors into the analytical $\Phi(s)$ to measure the resilience of the structured value function approach. The goal is to identify the "break-point" at which an inaccurate physical prior becomes more detrimental than learning from scratch.
+
+
+
+
+
+
+
+Respond in exactly the following format:
+
+\\begin{IDEA}
+<IDEA>
+\\end{IDEA}
+
+In <IDEA>, put the idea you have selected
+
+###### PROMPT ENDS ########
+
+\begin{IDEA}
+**Sensitivity to Lyapunov Function Imperfection**
+Introduce intentional biases or errors into the analytical $\Phi(s)$ to measure the resilience of the structured value function approach. The goal is to identify the "break-point" at which an inaccurate physical prior becomes more detrimental than learning from scratch.
+\end{IDEA}
+
+
+###### PROMPT BEGINS ########
+Human: 
+**Role**: Skeptical Red Team Reviewer and Scientific Auditor.
+**Objective**: Conduct a rigorous "Stress Test" on the proposed research idea to identify fatal flaws, feasibility gaps, and potential scientific "slop."
+
+**Evaluation Criteria**:
+1. **Data-Hypothesis Alignment**: Does the dataset described actually contain the variables and precision required to test this idea?
+2. **Feasibility & Noise**: Is the signal-to-noise ratio realistic? Is the idea too ambitious for the provided data?
+3. **Redundancy Check**: Does this idea simply repeat a "standard" analysis, or is it a meaningful contribution?
+4. **Physical Reality**: Does the idea violate any constraints or physical laws mentioned in the data description?
+
+**Task**:
+- Critically analyze the "Current Idea" against the "Data Description."
+- If the idea is **unfeasible**, explicitly state why and suggest a "Strategic Pivot" (a new direction that *is* supported by the data).
+- If the idea is **feasible but weak**, identify the specific "weak links" in the logic.
+- Compare it against "Previous Ideas" to ensure the refinement loop is moving forward, not backward.
+
+**Operational Constraints**:
+- **Tone**: Be professional, objective, and intellectually demanding. 
+- **Brevity**: Use high-density bullet points. Do not waste words on pleasantries.
+- **Strict Adherence**: Every criticism must be grounded in the provided 'Data Description.'
+
+**Input Data**:
+- **Data Description**: # Lyapunov-Based Reward Shaping for Reinforcement Learning
+
+## Overview
+
+This project investigates Lyapunov-based reward shaping in reinforcement learning, where the reward at each timestep is defined as the decrease in an analytically given Lyapunov function:
+
+    R_t = Φ(s_t) - Φ(s_{t+1})
+
+The core research question is whether structuring the value function as V(s) = Φ(s) + f(s) — where only the residual f(s) is learned — improves sample efficiency, stability, and policy quality compared to learning V(s) directly from scratch.
+
+## Environment
+
+**Gymnasium Pendulum-v1** — a standard continuous-control benchmark.
+
+- **State space:** s = (cos θ, sin θ, θ̇) ∈ [-1,1] × [-1,1] × [-8,8]
+- **Action space:** torque u ∈ [-2, 2] (continuous)
+- **Goal:** stabilize the pendulum at the upright position (θ = 0)
+- **Episode length:** 200 steps
+
+The native Gymnasium reward is replaced entirely by the Lyapunov-based reward defined below.
+
+## Lyapunov Function
+
+The Lyapunov function is the **mechanical energy of the pendulum** relative to the upright equilibrium:
+
+    Φ(s) = (1 - cos θ) + 0.5 * θ̇²
+
+Where:
+- θ = angle from upright (recovered from state as θ = atan2(sin θ, cos θ))
+- θ̇ = angular velocity (third component of state)
+- Φ(s) = 0 at the upright equilibrium (θ=0, θ̇=0)
+- Φ(s) > 0 everywhere else (positive definite)
+
+This is a valid Lyapunov candidate for the uncontrolled pendulum dynamics. The reward R_t = Φ(s_t) - Φ(s_{t+1}) is positive when the agent drives the system toward the equilibrium.
+
+## Research Conditions
+
+Two experimental conditions are compared using Soft Actor-Critic (SAC):
+
+### Condition A: Direct Value Learning
+- Standard SAC with the Lyapunov reward R_t = Φ(s_t) - Φ(s_{t+1})
+- Value function V(s) learned entirely from data (standard neural network critic)
+- Baseline: represents the standard approach to reward shaping
+
+### Condition B: Structured Value Function
+- Same SAC algorithm and Lyapunov reward
+- Value function decomposed as: V(s) = Φ(s) + f_θ(s)
+- Only the residual f_θ(s) is learned by the neural network
+- Critic network outputs f_θ(s); total value = Φ(s) + f_θ(s)
+- Hypothesis: initializing V with the physically meaningful Φ should improve sample efficiency and stability
+
+## Implementation Notes
+
+- Install gymnasium with: `pip install gymnasium[classic_control]`
+- SAC implementation: use stable-baselines3 or a custom PyTorch SAC
+- Custom reward wrapper: override the environment reward with R_t = Φ(s_t) - Φ(s_{t+1})
+- For Condition B, modify the critic network to output f_θ(s) and add Φ(s) analytically
+- Training: 100,000 environment steps per run, 5 random seeds each condition
+- Evaluation: average return (using Lyapunov reward), upright time, and convergence speed
+- Hardware: GPU available (NVIDIA RTX PRO 6000, use device='cuda')
+
+## Evaluation Metrics
+
+1. **Learning curves**: cumulative Lyapunov reward vs. environment steps (5 seeds, mean ± std)
+2. **Sample efficiency**: steps to reach 90% of maximum average reward
+3. **Upright stability**: fraction of time steps in upright region (|θ| < 0.1 rad) after training
+4. **Value function quality**: compare learned V(s) vs. true Φ(s) on a grid of states
+5. **Policy quality**: render/evaluate final policy qualitatively
+
+## File Paths
+
+No pre-existing data files. All data is generated online via environment interaction.
+The environment is instantiated in code as: `gymnasium.make('Pendulum-v1')`
+
+- **Current Idea**: **Sensitivity to Lyapunov Function Imperfection**
+Introduce intentional biases or errors into the analytical $\Phi(s)$ to measure the resilience of the structured value function approach. The goal is to identify the "break-point" at which an inaccurate physical prior becomes more detrimental than learning from scratch.    
+
+Respond in the following format:
+
+\\begin{CRITIC}
+<CRITIC>
+\\end{CRITIC}
+
+In <CRITIC>, put your criticism to the idea. Try to be brief in the description.
+
+###### PROMPT ENDS ########
+
+\begin{CRITIC}
+*   **Data-Hypothesis Alignment**: The current proposal lacks a mechanism to quantify "imperfection." Without a parameterized error model (e.g., scaling factors, noise injection, or structural mismatch), the "break-point" is ill-defined.
+*   **Feasibility & Noise**: Pendulum-v1 is a low-dimensional, deterministic environment. The signal-to-noise ratio is extremely high; the agent will likely "learn around" minor inaccuracies in $\Phi(s)$ via the residual $f_\theta(s)$ effortlessly, failing to reveal a meaningful break-point.
+*   **Redundancy Check**: This is a sensitivity analysis, not a novel architectural contribution. It tests the robustness of the *previous* idea rather than advancing the core research question of sample efficiency.
+*   **Physical Reality**: The Lyapunov function $\Phi(s)$ is derived from the system's Hamiltonian. Introducing "intentional bias" risks violating the positive-definiteness required for Lyapunov stability, potentially turning the "prior" into a source of misleading gradients that mask the agent's learning capacity.
+
+**Strategic Pivot**: 
+Shift focus from "breaking" the prior to **"Generalization under Dynamics Mismatch."** 
+Instead of corrupting $\Phi(s)$, keep the analytical $\Phi(s)$ fixed but introduce **system parameter perturbations** (e.g., change the pendulum mass or length in the environment dynamics). Test if the structured value function $V(s) = \Phi(s) + f_\theta(s)$ exhibits superior **transfer learning** or **zero-shot robustness** compared to the direct learner when the underlying physics shift. This tests the *utility* of the physical prior rather than its *fragility*.
+\end{CRITIC}
+
+
+###### PROMPT BEGINS ########
+Human: 
+**Role**: Senior Research Scientific.
+**Objective**: Synthesize a primary research idea with expert criticism to produce a refined, groundbreaking, and technically feasible scientific objective.
+
+**Task**:
+You are in an iterative refinement loop (Iteration: 0). Your goal is to take the "Previous Idea," pass it through the filter of the "Critiques," and produce a "Hardened Idea" that is more scientifically rigorous and original than its predecessor.
+
+**Refinement Principles**:
+1. **Address Caveats**: If the critic mentioned a lack of feasibility, adjust the scope of the idea to fit the 'Data Description.'
+2. **Increase Specificity**: Move away from generic goals. Use the statistics and variables found in the data description to make the idea more concrete.
+3. **Internalize Feedback**: Do not explicitly mention the criticism or explain your changes. Instead, weave the solutions directly into the new version of the idea.
+4. **Maintain Grounding**: Ensure the "groundbreaking" aspect remains physically possible within the provided dataset's constraints.
+
+**Operational Constraints**:
+- **Brevity**: Keep the description concise but high-density (max 6 sentences).
+- **Format**: Do not include introductory text or meta-commentary about the process.
+- **Fidelity**: Stick strictly to the guidelines and physical realities described in the data description.
+- The idea must contain a title and a description of the idea
+
+**Input Data**:
+- **Data Description**: # Lyapunov-Based Reward Shaping for Reinforcement Learning
+
+## Overview
+
+This project investigates Lyapunov-based reward shaping in reinforcement learning, where the reward at each timestep is defined as the decrease in an analytically given Lyapunov function:
+
+    R_t = Φ(s_t) - Φ(s_{t+1})
+
+The core research question is whether structuring the value function as V(s) = Φ(s) + f(s) — where only the residual f(s) is learned — improves sample efficiency, stability, and policy quality compared to learning V(s) directly from scratch.
+
+## Environment
+
+**Gymnasium Pendulum-v1** — a standard continuous-control benchmark.
+
+- **State space:** s = (cos θ, sin θ, θ̇) ∈ [-1,1] × [-1,1] × [-8,8]
+- **Action space:** torque u ∈ [-2, 2] (continuous)
+- **Goal:** stabilize the pendulum at the upright position (θ = 0)
+- **Episode length:** 200 steps
+
+The native Gymnasium reward is replaced entirely by the Lyapunov-based reward defined below.
+
+## Lyapunov Function
+
+The Lyapunov function is the **mechanical energy of the pendulum** relative to the upright equilibrium:
+
+    Φ(s) = (1 - cos θ) + 0.5 * θ̇²
+
+Where:
+- θ = angle from upright (recovered from state as θ = atan2(sin θ, cos θ))
+- θ̇ = angular velocity (third component of state)
+- Φ(s) = 0 at the upright equilibrium (θ=0, θ̇=0)
+- Φ(s) > 0 everywhere else (positive definite)
+
+This is a valid Lyapunov candidate for the uncontrolled pendulum dynamics. The reward R_t = Φ(s_t) - Φ(s_{t+1}) is positive when the agent drives the system toward the equilibrium.
+
+## Research Conditions
+
+Two experimental conditions are compared using Soft Actor-Critic (SAC):
+
+### Condition A: Direct Value Learning
+- Standard SAC with the Lyapunov reward R_t = Φ(s_t) - Φ(s_{t+1})
+- Value function V(s) learned entirely from data (standard neural network critic)
+- Baseline: represents the standard approach to reward shaping
+
+### Condition B: Structured Value Function
+- Same SAC algorithm and Lyapunov reward
+- Value function decomposed as: V(s) = Φ(s) + f_θ(s)
+- Only the residual f_θ(s) is learned by the neural network
+- Critic network outputs f_θ(s); total value = Φ(s) + f_θ(s)
+- Hypothesis: initializing V with the physically meaningful Φ should improve sample efficiency and stability
+
+## Implementation Notes
+
+- Install gymnasium with: `pip install gymnasium[classic_control]`
+- SAC implementation: use stable-baselines3 or a custom PyTorch SAC
+- Custom reward wrapper: override the environment reward with R_t = Φ(s_t) - Φ(s_{t+1})
+- For Condition B, modify the critic network to output f_θ(s) and add Φ(s) analytically
+- Training: 100,000 environment steps per run, 5 random seeds each condition
+- Evaluation: average return (using Lyapunov reward), upright time, and convergence speed
+- Hardware: GPU available (NVIDIA RTX PRO 6000, use device='cuda')
+
+## Evaluation Metrics
+
+1. **Learning curves**: cumulative Lyapunov reward vs. environment steps (5 seeds, mean ± std)
+2. **Sample efficiency**: steps to reach 90% of maximum average reward
+3. **Upright stability**: fraction of time steps in upright region (|θ| < 0.1 rad) after training
+4. **Value function quality**: compare learned V(s) vs. true Φ(s) on a grid of states
+5. **Policy quality**: render/evaluate final policy qualitatively
+
+## File Paths
+
+No pre-existing data files. All data is generated online via environment interaction.
+The environment is instantiated in code as: `gymnasium.make('Pendulum-v1')`
+
+- **Critical Feedback**: *   **Data-Hypothesis Alignment**: The current proposal lacks a mechanism to quantify "imperfection." Without a parameterized error model (e.g., scaling factors, noise injection, or structural mismatch), the "break-point" is ill-defined.
+*   **Feasibility & Noise**: Pendulum-v1 is a low-dimensional, deterministic environment. The signal-to-noise ratio is extremely high; the agent will likely "learn around" minor inaccuracies in $\Phi(s)$ via the residual $f_\theta(s)$ effortlessly, failing to reveal a meaningful break-point.
+*   **Redundancy Check**: This is a sensitivity analysis, not a novel architectural contribution. It tests the robustness of the *previous* idea rather than advancing the core research question of sample efficiency.
+*   **Physical Reality**: The Lyapunov function $\Phi(s)$ is derived from the system's Hamiltonian. Introducing "intentional bias" risks violating the positive-definiteness required for Lyapunov stability, potentially turning the "prior" into a source of misleading gradients that mask the agent's learning capacity.
+
+**Strategic Pivot**: 
+Shift focus from "breaking" the prior to **"Generalization under Dynamics Mismatch."** 
+Instead of corrupting $\Phi(s)$, keep the analytical $\Phi(s)$ fixed but introduce **system parameter perturbations** (e.g., change the pendulum mass or length in the environment dynamics). Test if the structured value function $V(s) = \Phi(s) + f_\theta(s)$ exhibits superior **transfer learning** or **zero-shot robustness** compared to the direct learner when the underlying physics shift. This tests the *utility* of the physical prior rather than its *fragility*.
+
+Respond in the following format:
+
+\\begin{IDEA}
+<IDEA>
+\\end{IDEA}
+
+In <IDEA>, put the refined idea. 
+
+###### PROMPT ENDS ########
+
+\begin{IDEA}
+**Title: Adaptive Physical Priors: Structured Value Learning for Robustness under System Parameter Perturbations**
+
+This research evaluates the structural inductive bias of the value function $V(s) = \Phi(s) + f_\theta(s)$ by measuring its capacity to maintain policy stability when the environment's internal physics (mass $m$ or length $l$) shift from the nominal values used to define the analytical Lyapunov prior $\Phi(s)$. By subjecting both the direct learner and the structured critic to a range of parameter perturbations ($m \in [0.5, 2.0]kg$, $l \in [0.5, 2.0]m$), we quantify the "generalization gap" where the fixed physical prior $\Phi(s)$ acts as a regularization constraint versus an optimization hurdle. We hypothesize that the structured critic will exhibit higher zero-shot performance and faster convergence in mismatched dynamics because the residual $f_\theta(s)$ effectively functions as an error-correction term for the physics-model mismatch. Success is measured by the delta in cumulative Lyapunov reward and upright stability duration ($|\theta| < 0.1$ rad) across shifted parameter distributions. This approach transforms the Lyapunov function from a static reward shaper into an adaptive prior that explicitly balances physical domain knowledge against learned residual dynamics.
+\end{IDEA}
+
+
+###### PROMPT BEGINS ########
+Human: 
+**Role**: Skeptical Red Team Reviewer and Scientific Auditor.
+**Objective**: Conduct a rigorous "Stress Test" on the proposed research idea to identify fatal flaws, feasibility gaps, and potential scientific "slop."
+
+**Evaluation Criteria**:
+1. **Data-Hypothesis Alignment**: Does the dataset described actually contain the variables and precision required to test this idea?
+2. **Feasibility & Noise**: Is the signal-to-noise ratio realistic? Is the idea too ambitious for the provided data?
+3. **Redundancy Check**: Does this idea simply repeat a "standard" analysis, or is it a meaningful contribution?
+4. **Physical Reality**: Does the idea violate any constraints or physical laws mentioned in the data description?
+
+**Task**:
+- Critically analyze the "Current Idea" against the "Data Description."
+- If the idea is **unfeasible**, explicitly state why and suggest a "Strategic Pivot" (a new direction that *is* supported by the data).
+- If the idea is **feasible but weak**, identify the specific "weak links" in the logic.
+- Compare it against "Previous Ideas" to ensure the refinement loop is moving forward, not backward.
+
+**Operational Constraints**:
+- **Tone**: Be professional, objective, and intellectually demanding. 
+- **Brevity**: Use high-density bullet points. Do not waste words on pleasantries.
+- **Strict Adherence**: Every criticism must be grounded in the provided 'Data Description.'
+
+**Input Data**:
+- **Data Description**: # Lyapunov-Based Reward Shaping for Reinforcement Learning
+
+## Overview
+
+This project investigates Lyapunov-based reward shaping in reinforcement learning, where the reward at each timestep is defined as the decrease in an analytically given Lyapunov function:
+
+    R_t = Φ(s_t) - Φ(s_{t+1})
+
+The core research question is whether structuring the value function as V(s) = Φ(s) + f(s) — where only the residual f(s) is learned — improves sample efficiency, stability, and policy quality compared to learning V(s) directly from scratch.
+
+## Environment
+
+**Gymnasium Pendulum-v1** — a standard continuous-control benchmark.
+
+- **State space:** s = (cos θ, sin θ, θ̇) ∈ [-1,1] × [-1,1] × [-8,8]
+- **Action space:** torque u ∈ [-2, 2] (continuous)
+- **Goal:** stabilize the pendulum at the upright position (θ = 0)
+- **Episode length:** 200 steps
+
+The native Gymnasium reward is replaced entirely by the Lyapunov-based reward defined below.
+
+## Lyapunov Function
+
+The Lyapunov function is the **mechanical energy of the pendulum** relative to the upright equilibrium:
+
+    Φ(s) = (1 - cos θ) + 0.5 * θ̇²
+
+Where:
+- θ = angle from upright (recovered from state as θ = atan2(sin θ, cos θ))
+- θ̇ = angular velocity (third component of state)
+- Φ(s) = 0 at the upright equilibrium (θ=0, θ̇=0)
+- Φ(s) > 0 everywhere else (positive definite)
+
+This is a valid Lyapunov candidate for the uncontrolled pendulum dynamics. The reward R_t = Φ(s_t) - Φ(s_{t+1}) is positive when the agent drives the system toward the equilibrium.
+
+## Research Conditions
+
+Two experimental conditions are compared using Soft Actor-Critic (SAC):
+
+### Condition A: Direct Value Learning
+- Standard SAC with the Lyapunov reward R_t = Φ(s_t) - Φ(s_{t+1})
+- Value function V(s) learned entirely from data (standard neural network critic)
+- Baseline: represents the standard approach to reward shaping
+
+### Condition B: Structured Value Function
+- Same SAC algorithm and Lyapunov reward
+- Value function decomposed as: V(s) = Φ(s) + f_θ(s)
+- Only the residual f_θ(s) is learned by the neural network
+- Critic network outputs f_θ(s); total value = Φ(s) + f_θ(s)
+- Hypothesis: initializing V with the physically meaningful Φ should improve sample efficiency and stability
+
+## Implementation Notes
+
+- Install gymnasium with: `pip install gymnasium[classic_control]`
+- SAC implementation: use stable-baselines3 or a custom PyTorch SAC
+- Custom reward wrapper: override the environment reward with R_t = Φ(s_t) - Φ(s_{t+1})
+- For Condition B, modify the critic network to output f_θ(s) and add Φ(s) analytically
+- Training: 100,000 environment steps per run, 5 random seeds each condition
+- Evaluation: average return (using Lyapunov reward), upright time, and convergence speed
+- Hardware: GPU available (NVIDIA RTX PRO 6000, use device='cuda')
+
+## Evaluation Metrics
+
+1. **Learning curves**: cumulative Lyapunov reward vs. environment steps (5 seeds, mean ± std)
+2. **Sample efficiency**: steps to reach 90% of maximum average reward
+3. **Upright stability**: fraction of time steps in upright region (|θ| < 0.1 rad) after training
+4. **Value function quality**: compare learned V(s) vs. true Φ(s) on a grid of states
+5. **Policy quality**: render/evaluate final policy qualitatively
+
+## File Paths
+
+No pre-existing data files. All data is generated online via environment interaction.
+The environment is instantiated in code as: `gymnasium.make('Pendulum-v1')`
+
+- **Current Idea**: **Title: Adaptive Physical Priors: Structured Value Learning for Robustness under System Parameter Perturbations**
+
+This research evaluates the structural inductive bias of the value function $V(s) = \Phi(s) + f_\theta(s)$ by measuring its capacity to maintain policy stability when the environment's internal physics (mass $m$ or length $l$) shift from the nominal values used to define the analytical Lyapunov prior $\Phi(s)$. By subjecting both the direct learner and the structured critic to a range of parameter perturbations ($m \in [0.5, 2.0]kg$, $l \in [0.5, 2.0]m$), we quantify the "generalization gap" where the fixed physical prior $\Phi(s)$ acts as a regularization constraint versus an optimization hurdle. We hypothesize that the structured critic will exhibit higher zero-shot performance and faster convergence in mismatched dynamics because the residual $f_\theta(s)$ effectively functions as an error-correction term for the physics-model mismatch. Success is measured by the delta in cumulative Lyapunov reward and upright stability duration ($|\theta| < 0.1$ rad) across shifted parameter distributions. This approach transforms the Lyapunov function from a static reward shaper into an adaptive prior that explicitly balances physical domain knowledge against learned residual dynamics.
+- **Previous Versions (for context)**: 
+
+
+Iteration 0:
+Idea: **Title: Adaptive Physical Priors: Structured Value Learning for Robustness under System Parameter Perturbations**
+
+This research evaluates the structural inductive bias of the value function $V(s) = \Phi(s) + f_\theta(s)$ by measuring its capacity to maintain policy stability when the environment's internal physics (mass $m$ or length $l$) shift from the nominal values used to define the analytical Lyapunov prior $\Phi(s)$. By subjecting both the direct learner and the structured critic to a range of parameter perturbations ($m \in [0.5, 2.0]kg$, $l \in [0.5, 2.0]m$), we quantify the "generalization gap" where the fixed physical prior $\Phi(s)$ acts as a regularization constraint versus an optimization hurdle. We hypothesize that the structured critic will exhibit higher zero-shot performance and faster convergence in mismatched dynamics because the residual $f_\theta(s)$ effectively functions as an error-correction term for the physics-model mismatch. Success is measured by the delta in cumulative Lyapunov reward and upright stability duration ($|\theta| < 0.1$ rad) across shifted parameter distributions. This approach transforms the Lyapunov function from a static reward shaper into an adaptive prior that explicitly balances physical domain knowledge against learned residual dynamics.
+    
+
+Respond in the following format:
+
+\\begin{CRITIC}
+<CRITIC>
+\\end{CRITIC}
+
+In <CRITIC>, put your criticism to the idea. Try to be brief in the description.
+
+###### PROMPT ENDS ########
+
+\begin{CRITIC}
+*   **Data-Hypothesis Mismatch**: The `Pendulum-v1` environment in Gymnasium has fixed parameters ($m=1.0, l=1.0, g=10.0$). The current proposal assumes the ability to perturb $m$ and $l$ to test robustness. Without modifying the environment source code or using a custom wrapper to inject these perturbations, the data is static and the hypothesis is untestable.
+*   **Feasibility & Noise**: The hypothesis assumes $f_\theta(s)$ will act as an "error-correction term." However, if the Lyapunov function $\Phi(s)$ is derived from the *nominal* physics, it becomes an incorrect prior under perturbed dynamics. The critic must then learn to "unlearn" the bias of $\Phi(s)$ to represent the true value function of the perturbed system. This may increase, not decrease, sample complexity.
+*   **Redundancy Check**: The proposal is a direct iteration of the previous idea (Iteration 0). It fails to address the fundamental constraint: the provided data description does not include a mechanism for parameter variation.
+*   **Strategic Pivot**: 
+    1.  **Environment Modification**: Explicitly define the requirement to modify the `Pendulum-v1` dynamics (e.g., `env.unwrapped.m = new_m`) to enable the perturbation study.
+    2.  **Baseline Refinement**: Include a "Learned Prior" condition where the prior is not fixed but is a secondary neural network, to determine if the *structure* of the prior or the *accuracy* of the prior is the primary driver of performance.
+    3.  **Constraint Check**: If environment modification is out of scope, pivot to testing the "Residual Learning" hypothesis under **stochastic noise** (e.g., action noise or state observation noise) rather than parameter shifts, as this is natively supported by the standard Gymnasium interface.
+\end{CRITIC}
+
+
+###### PROMPT BEGINS ########
+Human: 
+**Role**: Senior Research Scientific.
+**Objective**: Synthesize a primary research idea with expert criticism to produce a refined, groundbreaking, and technically feasible scientific objective.
+
+**Task**:
+You are in an iterative refinement loop (Iteration: 1). Your goal is to take the "Previous Idea," pass it through the filter of the "Critiques," and produce a "Hardened Idea" that is more scientifically rigorous and original than its predecessor.
+
+**Refinement Principles**:
+1. **Address Caveats**: If the critic mentioned a lack of feasibility, adjust the scope of the idea to fit the 'Data Description.'
+2. **Increase Specificity**: Move away from generic goals. Use the statistics and variables found in the data description to make the idea more concrete.
+3. **Internalize Feedback**: Do not explicitly mention the criticism or explain your changes. Instead, weave the solutions directly into the new version of the idea.
+4. **Maintain Grounding**: Ensure the "groundbreaking" aspect remains physically possible within the provided dataset's constraints.
+
+**Operational Constraints**:
+- **Brevity**: Keep the description concise but high-density (max 6 sentences).
+- **Format**: Do not include introductory text or meta-commentary about the process.
+- **Fidelity**: Stick strictly to the guidelines and physical realities described in the data description.
+- The idea must contain a title and a description of the idea
+
+**Input Data**:
+- **Data Description**: # Lyapunov-Based Reward Shaping for Reinforcement Learning
+
+## Overview
+
+This project investigates Lyapunov-based reward shaping in reinforcement learning, where the reward at each timestep is defined as the decrease in an analytically given Lyapunov function:
+
+    R_t = Φ(s_t) - Φ(s_{t+1})
+
+The core research question is whether structuring the value function as V(s) = Φ(s) + f(s) — where only the residual f(s) is learned — improves sample efficiency, stability, and policy quality compared to learning V(s) directly from scratch.
+
+## Environment
+
+**Gymnasium Pendulum-v1** — a standard continuous-control benchmark.
+
+- **State space:** s = (cos θ, sin θ, θ̇) ∈ [-1,1] × [-1,1] × [-8,8]
+- **Action space:** torque u ∈ [-2, 2] (continuous)
+- **Goal:** stabilize the pendulum at the upright position (θ = 0)
+- **Episode length:** 200 steps
+
+The native Gymnasium reward is replaced entirely by the Lyapunov-based reward defined below.
+
+## Lyapunov Function
+
+The Lyapunov function is the **mechanical energy of the pendulum** relative to the upright equilibrium:
+
+    Φ(s) = (1 - cos θ) + 0.5 * θ̇²
+
+Where:
+- θ = angle from upright (recovered from state as θ = atan2(sin θ, cos θ))
+- θ̇ = angular velocity (third component of state)
+- Φ(s) = 0 at the upright equilibrium (θ=0, θ̇=0)
+- Φ(s) > 0 everywhere else (positive definite)
+
+This is a valid Lyapunov candidate for the uncontrolled pendulum dynamics. The reward R_t = Φ(s_t) - Φ(s_{t+1}) is positive when the agent drives the system toward the equilibrium.
+
+## Research Conditions
+
+Two experimental conditions are compared using Soft Actor-Critic (SAC):
+
+### Condition A: Direct Value Learning
+- Standard SAC with the Lyapunov reward R_t = Φ(s_t) - Φ(s_{t+1})
+- Value function V(s) learned entirely from data (standard neural network critic)
+- Baseline: represents the standard approach to reward shaping
+
+### Condition B: Structured Value Function
+- Same SAC algorithm and Lyapunov reward
+- Value function decomposed as: V(s) = Φ(s) + f_θ(s)
+- Only the residual f_θ(s) is learned by the neural network
+- Critic network outputs f_θ(s); total value = Φ(s) + f_θ(s)
+- Hypothesis: initializing V with the physically meaningful Φ should improve sample efficiency and stability
+
+## Implementation Notes
+
+- Install gymnasium with: `pip install gymnasium[classic_control]`
+- SAC implementation: use stable-baselines3 or a custom PyTorch SAC
+- Custom reward wrapper: override the environment reward with R_t = Φ(s_t) - Φ(s_{t+1})
+- For Condition B, modify the critic network to output f_θ(s) and add Φ(s) analytically
+- Training: 100,000 environment steps per run, 5 random seeds each condition
+- Evaluation: average return (using Lyapunov reward), upright time, and convergence speed
+- Hardware: GPU available (NVIDIA RTX PRO 6000, use device='cuda')
+
+## Evaluation Metrics
+
+1. **Learning curves**: cumulative Lyapunov reward vs. environment steps (5 seeds, mean ± std)
+2. **Sample efficiency**: steps to reach 90% of maximum average reward
+3. **Upright stability**: fraction of time steps in upright region (|θ| < 0.1 rad) after training
+4. **Value function quality**: compare learned V(s) vs. true Φ(s) on a grid of states
+5. **Policy quality**: render/evaluate final policy qualitatively
+
+## File Paths
+
+No pre-existing data files. All data is generated online via environment interaction.
+The environment is instantiated in code as: `gymnasium.make('Pendulum-v1')`
+
+- **Previous Versions**: 
+
+
+Iteration 0:
+Idea: **Title: Adaptive Physical Priors: Structured Value Learning for Robustness under System Parameter Perturbations**
+
+This research evaluates the structural inductive bias of the value function $V(s) = \Phi(s) + f_\theta(s)$ by measuring its capacity to maintain policy stability when the environment's internal physics (mass $m$ or length $l$) shift from the nominal values used to define the analytical Lyapunov prior $\Phi(s)$. By subjecting both the direct learner and the structured critic to a range of parameter perturbations ($m \in [0.5, 2.0]kg$, $l \in [0.5, 2.0]m$), we quantify the "generalization gap" where the fixed physical prior $\Phi(s)$ acts as a regularization constraint versus an optimization hurdle. We hypothesize that the structured critic will exhibit higher zero-shot performance and faster convergence in mismatched dynamics because the residual $f_\theta(s)$ effectively functions as an error-correction term for the physics-model mismatch. Success is measured by the delta in cumulative Lyapunov reward and upright stability duration ($|\theta| < 0.1$ rad) across shifted parameter distributions. This approach transforms the Lyapunov function from a static reward shaper into an adaptive prior that explicitly balances physical domain knowledge against learned residual dynamics.
+
+- **Critical Feedback**: *   **Data-Hypothesis Mismatch**: The `Pendulum-v1` environment in Gymnasium has fixed parameters ($m=1.0, l=1.0, g=10.0$). The current proposal assumes the ability to perturb $m$ and $l$ to test robustness. Without modifying the environment source code or using a custom wrapper to inject these perturbations, the data is static and the hypothesis is untestable.
+*   **Feasibility & Noise**: The hypothesis assumes $f_\theta(s)$ will act as an "error-correction term." However, if the Lyapunov function $\Phi(s)$ is derived from the *nominal* physics, it becomes an incorrect prior under perturbed dynamics. The critic must then learn to "unlearn" the bias of $\Phi(s)$ to represent the true value function of the perturbed system. This may increase, not decrease, sample complexity.
+*   **Redundancy Check**: The proposal is a direct iteration of the previous idea (Iteration 0). It fails to address the fundamental constraint: the provided data description does not include a mechanism for parameter variation.
+*   **Strategic Pivot**: 
+    1.  **Environment Modification**: Explicitly define the requirement to modify the `Pendulum-v1` dynamics (e.g., `env.unwrapped.m = new_m`) to enable the perturbation study.
+    2.  **Baseline Refinement**: Include a "Learned Prior" condition where the prior is not fixed but is a secondary neural network, to determine if the *structure* of the prior or the *accuracy* of the prior is the primary driver of performance.
+    3.  **Constraint Check**: If environment modification is out of scope, pivot to testing the "Residual Learning" hypothesis under **stochastic noise** (e.g., action noise or state observation noise) rather than parameter shifts, as this is natively supported by the standard Gymnasium interface.
+
+Respond in the following format:
+
+\\begin{IDEA}
+<IDEA>
+\\end{IDEA}
+
+In <IDEA>, put the refined idea. 
+
+###### PROMPT ENDS ########
+
+\begin{IDEA}
+**Title: Residual-Corrected Lyapunov Value Learning for Robust Control under Stochastic Perturbations**
+
+This research investigates whether decomposing the value function into a static physical prior $\Phi(s)$ and a learned residual $f_\theta(s)$ confers superior sample efficiency and robustness to stochastic input noise compared to monolithic value learning. By injecting Gaussian noise $\mathcal{N}(0, \sigma^2)$ into the action space $u$ and state observations $s$ during the training of the `Pendulum-v1` agent, we test the hypothesis that the analytical prior $\Phi(s)$ acts as a stabilizing backbone, allowing the residual network $f_\theta(s)$ to focus exclusively on modeling the stochastic disturbances. We compare the structured critic against a standard SAC baseline across a noise intensity gradient ($\sigma \in \{0.0, 0.1, 0.2, 0.5\}$) to quantify the divergence between the learned residual and the true value function. Success is defined by the stability of the upright equilibrium ($|\theta| < 0.1$ rad) and the convergence speed to 90% of maximum reward under increasing noise levels. This framework empirically validates the inductive bias of physical priors in mitigating the variance typically introduced by noisy environment interactions in continuous control.
+\end{IDEA}
+
+
+###### PROMPT BEGINS ########
+Human: 
+**Role**: Skeptical Red Team Reviewer and Scientific Auditor.
+**Objective**: Conduct a rigorous "Stress Test" on the proposed research idea to identify fatal flaws, feasibility gaps, and potential scientific "slop."
+
+**Evaluation Criteria**:
+1. **Data-Hypothesis Alignment**: Does the dataset described actually contain the variables and precision required to test this idea?
+2. **Feasibility & Noise**: Is the signal-to-noise ratio realistic? Is the idea too ambitious for the provided data?
+3. **Redundancy Check**: Does this idea simply repeat a "standard" analysis, or is it a meaningful contribution?
+4. **Physical Reality**: Does the idea violate any constraints or physical laws mentioned in the data description?
+
+**Task**:
+- Critically analyze the "Current Idea" against the "Data Description."
+- If the idea is **unfeasible**, explicitly state why and suggest a "Strategic Pivot" (a new direction that *is* supported by the data).
+- If the idea is **feasible but weak**, identify the specific "weak links" in the logic.
+- Compare it against "Previous Ideas" to ensure the refinement loop is moving forward, not backward.
+
+**Operational Constraints**:
+- **Tone**: Be professional, objective, and intellectually demanding. 
+- **Brevity**: Use high-density bullet points. Do not waste words on pleasantries.
+- **Strict Adherence**: Every criticism must be grounded in the provided 'Data Description.'
+
+**Input Data**:
+- **Data Description**: # Lyapunov-Based Reward Shaping for Reinforcement Learning
+
+## Overview
+
+This project investigates Lyapunov-based reward shaping in reinforcement learning, where the reward at each timestep is defined as the decrease in an analytically given Lyapunov function:
+
+    R_t = Φ(s_t) - Φ(s_{t+1})
+
+The core research question is whether structuring the value function as V(s) = Φ(s) + f(s) — where only the residual f(s) is learned — improves sample efficiency, stability, and policy quality compared to learning V(s) directly from scratch.
+
+## Environment
+
+**Gymnasium Pendulum-v1** — a standard continuous-control benchmark.
+
+- **State space:** s = (cos θ, sin θ, θ̇) ∈ [-1,1] × [-1,1] × [-8,8]
+- **Action space:** torque u ∈ [-2, 2] (continuous)
+- **Goal:** stabilize the pendulum at the upright position (θ = 0)
+- **Episode length:** 200 steps
+
+The native Gymnasium reward is replaced entirely by the Lyapunov-based reward defined below.
+
+## Lyapunov Function
+
+The Lyapunov function is the **mechanical energy of the pendulum** relative to the upright equilibrium:
+
+    Φ(s) = (1 - cos θ) + 0.5 * θ̇²
+
+Where:
+- θ = angle from upright (recovered from state as θ = atan2(sin θ, cos θ))
+- θ̇ = angular velocity (third component of state)
+- Φ(s) = 0 at the upright equilibrium (θ=0, θ̇=0)
+- Φ(s) > 0 everywhere else (positive definite)
+
+This is a valid Lyapunov candidate for the uncontrolled pendulum dynamics. The reward R_t = Φ(s_t) - Φ(s_{t+1}) is positive when the agent drives the system toward the equilibrium.
+
+## Research Conditions
+
+Two experimental conditions are compared using Soft Actor-Critic (SAC):
+
+### Condition A: Direct Value Learning
+- Standard SAC with the Lyapunov reward R_t = Φ(s_t) - Φ(s_{t+1})
+- Value function V(s) learned entirely from data (standard neural network critic)
+- Baseline: represents the standard approach to reward shaping
+
+### Condition B: Structured Value Function
+- Same SAC algorithm and Lyapunov reward
+- Value function decomposed as: V(s) = Φ(s) + f_θ(s)
+- Only the residual f_θ(s) is learned by the neural network
+- Critic network outputs f_θ(s); total value = Φ(s) + f_θ(s)
+- Hypothesis: initializing V with the physically meaningful Φ should improve sample efficiency and stability
+
+## Implementation Notes
+
+- Install gymnasium with: `pip install gymnasium[classic_control]`
+- SAC implementation: use stable-baselines3 or a custom PyTorch SAC
+- Custom reward wrapper: override the environment reward with R_t = Φ(s_t) - Φ(s_{t+1})
+- For Condition B, modify the critic network to output f_θ(s) and add Φ(s) analytically
+- Training: 100,000 environment steps per run, 5 random seeds each condition
+- Evaluation: average return (using Lyapunov reward), upright time, and convergence speed
+- Hardware: GPU available (NVIDIA RTX PRO 6000, use device='cuda')
+
+## Evaluation Metrics
+
+1. **Learning curves**: cumulative Lyapunov reward vs. environment steps (5 seeds, mean ± std)
+2. **Sample efficiency**: steps to reach 90% of maximum average reward
+3. **Upright stability**: fraction of time steps in upright region (|θ| < 0.1 rad) after training
+4. **Value function quality**: compare learned V(s) vs. true Φ(s) on a grid of states
+5. **Policy quality**: render/evaluate final policy qualitatively
+
+## File Paths
+
+No pre-existing data files. All data is generated online via environment interaction.
+The environment is instantiated in code as: `gymnasium.make('Pendulum-v1')`
+
+- **Current Idea**: **Title: Residual-Corrected Lyapunov Value Learning for Robust Control under Stochastic Perturbations**
+
+This research investigates whether decomposing the value function into a static physical prior $\Phi(s)$ and a learned residual $f_\theta(s)$ confers superior sample efficiency and robustness to stochastic input noise compared to monolithic value learning. By injecting Gaussian noise $\mathcal{N}(0, \sigma^2)$ into the action space $u$ and state observations $s$ during the training of the `Pendulum-v1` agent, we test the hypothesis that the analytical prior $\Phi(s)$ acts as a stabilizing backbone, allowing the residual network $f_\theta(s)$ to focus exclusively on modeling the stochastic disturbances. We compare the structured critic against a standard SAC baseline across a noise intensity gradient ($\sigma \in \{0.0, 0.1, 0.2, 0.5\}$) to quantify the divergence between the learned residual and the true value function. Success is defined by the stability of the upright equilibrium ($|\theta| < 0.1$ rad) and the convergence speed to 90% of maximum reward under increasing noise levels. This framework empirically validates the inductive bias of physical priors in mitigating the variance typically introduced by noisy environment interactions in continuous control.
+- **Previous Versions (for context)**: 
+
+
+
+Iteration 0:
+Idea: **Title: Adaptive Physical Priors: Structured Value Learning for Robustness under System Parameter Perturbations**
+
+This research evaluates the structural inductive bias of the value function $V(s) = \Phi(s) + f_\theta(s)$ by measuring its capacity to maintain policy stability when the environment's internal physics (mass $m$ or length $l$) shift from the nominal values used to define the analytical Lyapunov prior $\Phi(s)$. By subjecting both the direct learner and the structured critic to a range of parameter perturbations ($m \in [0.5, 2.0]kg$, $l \in [0.5, 2.0]m$), we quantify the "generalization gap" where the fixed physical prior $\Phi(s)$ acts as a regularization constraint versus an optimization hurdle. We hypothesize that the structured critic will exhibit higher zero-shot performance and faster convergence in mismatched dynamics because the residual $f_\theta(s)$ effectively functions as an error-correction term for the physics-model mismatch. Success is measured by the delta in cumulative Lyapunov reward and upright stability duration ($|\theta| < 0.1$ rad) across shifted parameter distributions. This approach transforms the Lyapunov function from a static reward shaper into an adaptive prior that explicitly balances physical domain knowledge against learned residual dynamics.
+
+
+Iteration 1:
+Idea: **Title: Residual-Corrected Lyapunov Value Learning for Robust Control under Stochastic Perturbations**
+
+This research investigates whether decomposing the value function into a static physical prior $\Phi(s)$ and a learned residual $f_\theta(s)$ confers superior sample efficiency and robustness to stochastic input noise compared to monolithic value learning. By injecting Gaussian noise $\mathcal{N}(0, \sigma^2)$ into the action space $u$ and state observations $s$ during the training of the `Pendulum-v1` agent, we test the hypothesis that the analytical prior $\Phi(s)$ acts as a stabilizing backbone, allowing the residual network $f_\theta(s)$ to focus exclusively on modeling the stochastic disturbances. We compare the structured critic against a standard SAC baseline across a noise intensity gradient ($\sigma \in \{0.0, 0.1, 0.2, 0.5\}$) to quantify the divergence between the learned residual and the true value function. Success is defined by the stability of the upright equilibrium ($|\theta| < 0.1$ rad) and the convergence speed to 90% of maximum reward under increasing noise levels. This framework empirically validates the inductive bias of physical priors in mitigating the variance typically introduced by noisy environment interactions in continuous control.
+    
+
+Respond in the following format:
+
+\\begin{CRITIC}
+<CRITIC>
+\\end{CRITIC}
+
+In <CRITIC>, put your criticism to the idea. Try to be brief in the description.
+
+###### PROMPT ENDS ########
+
+\begin{CRITIC}
+*   **Data-Hypothesis Alignment**: The `Pendulum-v1` environment does not natively support stochastic state observation noise. Implementing this requires a custom wrapper. Ensure the noise is applied to the *observation* (input to the policy/critic) and not the *state* (the ground truth physics), or the Lyapunov function $\Phi(s)$ will be calculated on corrupted data, invalidating the "analytical prior" premise.
+*   **Feasibility & Noise**: At $\sigma=0.5$, the noise magnitude is significant relative to the action space $u \in [-2, 2]$. The signal-to-noise ratio will likely collapse, making the "residual" $f_\theta(s)$ attempt to model white noise rather than system dynamics. This risks overfitting to the noise distribution rather than learning a robust control policy.
+*   **Redundancy Check**: This is a marginal iteration of Iteration 0. While Iteration 0 tested *model mismatch* (a structural flaw in the prior), this tests *stochasticity*. The logic remains identical: "Does the residual network handle the delta between the prior and reality?"
+*   **Weak Link**: The hypothesis assumes $f_\theta(s)$ will learn to model the noise. However, in SAC, the critic learns the *expected* return. If the noise is zero-mean Gaussian, the expectation of the noise is zero. The residual network may simply learn to ignore the noise, rendering the "robustness" claim moot.
+*   **Strategic Pivot**: Instead of injecting Gaussian noise (which averages out), introduce a **systematic bias** (e.g., a constant wind force or a friction coefficient shift). This forces the residual $f_\theta(s)$ to learn a non-zero correction, providing a clearer test of whether the structured prior accelerates convergence compared to the monolithic baseline.
+\end{CRITIC}
+
+
+###### PROMPT BEGINS ########
+Human: 
+**Role**: Senior Research Scientific.
+**Objective**: Synthesize a primary research idea with expert criticism to produce a refined, groundbreaking, and technically feasible scientific objective.
+
+**Task**:
+You are in an iterative refinement loop (Iteration: 2). Your goal is to take the "Previous Idea," pass it through the filter of the "Critiques," and produce a "Hardened Idea" that is more scientifically rigorous and original than its predecessor.
+
+**Refinement Principles**:
+1. **Address Caveats**: If the critic mentioned a lack of feasibility, adjust the scope of the idea to fit the 'Data Description.'
+2. **Increase Specificity**: Move away from generic goals. Use the statistics and variables found in the data description to make the idea more concrete.
+3. **Internalize Feedback**: Do not explicitly mention the criticism or explain your changes. Instead, weave the solutions directly into the new version of the idea.
+4. **Maintain Grounding**: Ensure the "groundbreaking" aspect remains physically possible within the provided dataset's constraints.
+
+**Operational Constraints**:
+- **Brevity**: Keep the description concise but high-density (max 6 sentences).
+- **Format**: Do not include introductory text or meta-commentary about the process.
+- **Fidelity**: Stick strictly to the guidelines and physical realities described in the data description.
+- The idea must contain a title and a description of the idea
+
+**Input Data**:
+- **Data Description**: # Lyapunov-Based Reward Shaping for Reinforcement Learning
+
+## Overview
+
+This project investigates Lyapunov-based reward shaping in reinforcement learning, where the reward at each timestep is defined as the decrease in an analytically given Lyapunov function:
+
+    R_t = Φ(s_t) - Φ(s_{t+1})
+
+The core research question is whether structuring the value function as V(s) = Φ(s) + f(s) — where only the residual f(s) is learned — improves sample efficiency, stability, and policy quality compared to learning V(s) directly from scratch.
+
+## Environment
+
+**Gymnasium Pendulum-v1** — a standard continuous-control benchmark.
+
+- **State space:** s = (cos θ, sin θ, θ̇) ∈ [-1,1] × [-1,1] × [-8,8]
+- **Action space:** torque u ∈ [-2, 2] (continuous)
+- **Goal:** stabilize the pendulum at the upright position (θ = 0)
+- **Episode length:** 200 steps
+
+The native Gymnasium reward is replaced entirely by the Lyapunov-based reward defined below.
+
+## Lyapunov Function
+
+The Lyapunov function is the **mechanical energy of the pendulum** relative to the upright equilibrium:
+
+    Φ(s) = (1 - cos θ) + 0.5 * θ̇²
+
+Where:
+- θ = angle from upright (recovered from state as θ = atan2(sin θ, cos θ))
+- θ̇ = angular velocity (third component of state)
+- Φ(s) = 0 at the upright equilibrium (θ=0, θ̇=0)
+- Φ(s) > 0 everywhere else (positive definite)
+
+This is a valid Lyapunov candidate for the uncontrolled pendulum dynamics. The reward R_t = Φ(s_t) - Φ(s_{t+1}) is positive when the agent drives the system toward the equilibrium.
+
+## Research Conditions
+
+Two experimental conditions are compared using Soft Actor-Critic (SAC):
+
+### Condition A: Direct Value Learning
+- Standard SAC with the Lyapunov reward R_t = Φ(s_t) - Φ(s_{t+1})
+- Value function V(s) learned entirely from data (standard neural network critic)
+- Baseline: represents the standard approach to reward shaping
+
+### Condition B: Structured Value Function
+- Same SAC algorithm and Lyapunov reward
+- Value function decomposed as: V(s) = Φ(s) + f_θ(s)
+- Only the residual f_θ(s) is learned by the neural network
+- Critic network outputs f_θ(s); total value = Φ(s) + f_θ(s)
+- Hypothesis: initializing V with the physically meaningful Φ should improve sample efficiency and stability
+
+## Implementation Notes
+
+- Install gymnasium with: `pip install gymnasium[classic_control]`
+- SAC implementation: use stable-baselines3 or a custom PyTorch SAC
+- Custom reward wrapper: override the environment reward with R_t = Φ(s_t) - Φ(s_{t+1})
+- For Condition B, modify the critic network to output f_θ(s) and add Φ(s) analytically
+- Training: 100,000 environment steps per run, 5 random seeds each condition
+- Evaluation: average return (using Lyapunov reward), upright time, and convergence speed
+- Hardware: GPU available (NVIDIA RTX PRO 6000, use device='cuda')
+
+## Evaluation Metrics
+
+1. **Learning curves**: cumulative Lyapunov reward vs. environment steps (5 seeds, mean ± std)
+2. **Sample efficiency**: steps to reach 90% of maximum average reward
+3. **Upright stability**: fraction of time steps in upright region (|θ| < 0.1 rad) after training
+4. **Value function quality**: compare learned V(s) vs. true Φ(s) on a grid of states
+5. **Policy quality**: render/evaluate final policy qualitatively
+
+## File Paths
+
+No pre-existing data files. All data is generated online via environment interaction.
+The environment is instantiated in code as: `gymnasium.make('Pendulum-v1')`
+
+- **Previous Versions**: 
+
+
+
+Iteration 0:
+Idea: **Title: Adaptive Physical Priors: Structured Value Learning for Robustness under System Parameter Perturbations**
+
+This research evaluates the structural inductive bias of the value function $V(s) = \Phi(s) + f_\theta(s)$ by measuring its capacity to maintain policy stability when the environment's internal physics (mass $m$ or length $l$) shift from the nominal values used to define the analytical Lyapunov prior $\Phi(s)$. By subjecting both the direct learner and the structured critic to a range of parameter perturbations ($m \in [0.5, 2.0]kg$, $l \in [0.5, 2.0]m$), we quantify the "generalization gap" where the fixed physical prior $\Phi(s)$ acts as a regularization constraint versus an optimization hurdle. We hypothesize that the structured critic will exhibit higher zero-shot performance and faster convergence in mismatched dynamics because the residual $f_\theta(s)$ effectively functions as an error-correction term for the physics-model mismatch. Success is measured by the delta in cumulative Lyapunov reward and upright stability duration ($|\theta| < 0.1$ rad) across shifted parameter distributions. This approach transforms the Lyapunov function from a static reward shaper into an adaptive prior that explicitly balances physical domain knowledge against learned residual dynamics.
+
+
+Iteration 1:
+Idea: **Title: Residual-Corrected Lyapunov Value Learning for Robust Control under Stochastic Perturbations**
+
+This research investigates whether decomposing the value function into a static physical prior $\Phi(s)$ and a learned residual $f_\theta(s)$ confers superior sample efficiency and robustness to stochastic input noise compared to monolithic value learning. By injecting Gaussian noise $\mathcal{N}(0, \sigma^2)$ into the action space $u$ and state observations $s$ during the training of the `Pendulum-v1` agent, we test the hypothesis that the analytical prior $\Phi(s)$ acts as a stabilizing backbone, allowing the residual network $f_\theta(s)$ to focus exclusively on modeling the stochastic disturbances. We compare the structured critic against a standard SAC baseline across a noise intensity gradient ($\sigma \in \{0.0, 0.1, 0.2, 0.5\}$) to quantify the divergence between the learned residual and the true value function. Success is defined by the stability of the upright equilibrium ($|\theta| < 0.1$ rad) and the convergence speed to 90% of maximum reward under increasing noise levels. This framework empirically validates the inductive bias of physical priors in mitigating the variance typically introduced by noisy environment interactions in continuous control.
+
+- **Critical Feedback**: *   **Data-Hypothesis Alignment**: The `Pendulum-v1` environment does not natively support stochastic state observation noise. Implementing this requires a custom wrapper. Ensure the noise is applied to the *observation* (input to the policy/critic) and not the *state* (the ground truth physics), or the Lyapunov function $\Phi(s)$ will be calculated on corrupted data, invalidating the "analytical prior" premise.
+*   **Feasibility & Noise**: At $\sigma=0.5$, the noise magnitude is significant relative to the action space $u \in [-2, 2]$. The signal-to-noise ratio will likely collapse, making the "residual" $f_\theta(s)$ attempt to model white noise rather than system dynamics. This risks overfitting to the noise distribution rather than learning a robust control policy.
+*   **Redundancy Check**: This is a marginal iteration of Iteration 0. While Iteration 0 tested *model mismatch* (a structural flaw in the prior), this tests *stochasticity*. The logic remains identical: "Does the residual network handle the delta between the prior and reality?"
+*   **Weak Link**: The hypothesis assumes $f_\theta(s)$ will learn to model the noise. However, in SAC, the critic learns the *expected* return. If the noise is zero-mean Gaussian, the expectation of the noise is zero. The residual network may simply learn to ignore the noise, rendering the "robustness" claim moot.
+*   **Strategic Pivot**: Instead of injecting Gaussian noise (which averages out), introduce a **systematic bias** (e.g., a constant wind force or a friction coefficient shift). This forces the residual $f_\theta(s)$ to learn a non-zero correction, providing a clearer test of whether the structured prior accelerates convergence compared to the monolithic baseline.
+
+Respond in the following format:
+
+\\begin{IDEA}
+<IDEA>
+\\end{IDEA}
+
+In <IDEA>, put the refined idea. 
+
+###### PROMPT ENDS ########
+
+\begin{IDEA}
+**Title: Adaptive Residual Learning for Compensating Systematic Dynamics Mismatch**
+
+This research investigates the efficacy of the structured value function $V(s) = \Phi(s) + f_\theta(s)$ in accelerating policy convergence when the pendulum's underlying dynamics are systematically biased by an unmodeled constant torque disturbance $\tau_{ext} \in \{0.5, 1.0, 1.5\}$ Nm. Since the analytical Lyapunov prior $\Phi(s)$ is derived from the nominal pendulum physics, it fails to account for the equilibrium displacement caused by $\tau_{ext}$, forcing the residual network $f_\theta(s)$ to explicitly learn the state-dependent correction required to restore the upright equilibrium at $\theta=0$. We compare this structured approach against a monolithic SAC critic to determine if the physical prior acts as a stable anchor that reduces the search space for the residual network, thereby increasing sample efficiency. Performance is evaluated by measuring the convergence rate to 90% of the maximum Lyapunov reward and the precision of the upright stabilization under these shifted dynamics. This framework demonstrates how a structured critic leverages physical domain knowledge to generalize across environments with persistent, non-zero-mean dynamic offsets that would otherwise destabilize standard value learning.
+\end{IDEA}
+
