@@ -1,3 +1,4 @@
+<!-- filename: reports/step_6_pendulum_lyapunov_analysis.md -->
 # Results and Analysis: Lyapunov-Structured Value Functions for Reinforcement Learning on the Pendulum
 
 ## 1. Introduction and Experimental Overview

@@ -9,7 +9,7 @@ import torch
 import gymnasium as gym
 import pickle
 import time
-from step_1 import SAC, SACArgs, ReplayMemory, LyapunovRewardWrapper, compute_phi_tensor
+from step_1 import SAC, SACArgs, ReplayMemory, LyapunovRewardWrapper
 def evaluate_policy(agent, env_name, wrapper, seed, eval_steps=1000):
     env = gym.make(env_name)
     if wrapper:
@@ -43,15 +43,16 @@ def train_agent_condition_B(seed):
     args.automatic_entropy_tuning = True
     args.structured = True
     agent = SAC(env.observation_space.shape[0], env.action_space, args)
+    memory = ReplayMemory(100000, env.observation_space.shape[0], env.action_space.shape[0])
     obs_test, _ = env.reset(seed=seed)
     action_test = env.action_space.sample()
     obs_tensor = torch.FloatTensor(obs_test).unsqueeze(0).to(agent.device)
     action_tensor = torch.FloatTensor(action_test).unsqueeze(0).to(agent.device)
     with torch.no_grad():
         q1, q2 = agent.critic(obs_tensor, action_tensor)
-        phi = compute_phi_tensor(obs_tensor)
-    print('  Verification at start: Phi(s) = ' + str(round(phi.item(), 4)) + ', Q1(s,a) = ' + str(round(q1.item(), 4)) + ', Q2(s,a) = ' + str(round(q2.item(), 4)), flush=True)
-    memory = ReplayMemory(100000, env.observation_space.shape[0], env.action_space.shape[0])
+    theta_test = np.arctan2(obs_test[1], obs_test[0])
+    phi_test = (1.0 - np.cos(theta_test)) + 0.5 * (obs_test[2] ** 2)
+    print('Seed ' + str(seed) + ' Init Check - Phi: ' + str(round(phi_test, 4)) + ', Q1: ' + str(round(q1.item(), 4)) + ', Q2: ' + str(round(q2.item(), 4)), flush=True)
     updates = 0
     num_steps = 30000
     batch_size = 256
@@ -101,7 +102,7 @@ def train_agent_condition_B(seed):
         torch.cuda.empty_cache()
     return res
 if __name__ == '__main__':
-    print('Starting sequential training for Condition B (Structured Critic)...', flush=True)
+    print('Starting sequential training for Condition B...', flush=True)
     results = []
     for seed in range(5):
         res = train_agent_condition_B(seed)
