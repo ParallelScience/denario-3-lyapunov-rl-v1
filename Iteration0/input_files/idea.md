@@ -6,11 +6,11 @@ The environment is Gymnasium Pendulum-v1, a standard continuous-control benchmar
 
 $$R_t = \Phi(s_t) - \Phi(s_{t+1})$$
 
-where the Lyapunov function is the mechanical energy of the pendulum relative to the upright equilibrium:
+where $\Phi(s)$ is a Lyapunov function for the pendulum system. Specifically, $\Phi$ is the mechanical energy relative to the upright equilibrium:
 
 $$\Phi(s) = (1 - \cos\theta) + \frac{1}{2}\dot\theta^2$$
 
-This reward is positive when the agent drives the system toward the equilibrium ($\Phi \to 0$) and zero at the goal.
+$\Phi$ satisfies the Lyapunov conditions: it is positive definite ($\Phi(s) > 0$ for all $s \neq s^*$, $\Phi(s^*) = 0$ at the upright equilibrium $s^* = (\theta=0, \dot\theta=0)$), and radially unbounded. The reward $R_t = \Phi(s_t) - \Phi(s_{t+1})$ is therefore positive whenever the agent drives the system toward the equilibrium (decreasing $\Phi$), and zero at the goal. By design, a policy that consistently achieves positive reward is one that drives $\Phi$ to zero — i.e., one that stabilizes the system in the Lyapunov sense.
 
 Two experimental conditions are compared using Soft Actor-Critic (SAC):
 
