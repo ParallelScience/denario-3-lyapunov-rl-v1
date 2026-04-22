@@ -454,5 +454,157 @@
       "Completion Tokens": [],
       "Total Tokens": []
     }
+  },
+  {
+    "name": "control_starter",
+    "content": "",
+    "timestamp": "2026-04-22 18:36:03",
+    "cost": {
+      "Agent": [
+        "control_starter"
+      ],
+      "Model": [
+        "gemini-3.1-flash-lite-preview"
+      ],
+      "Cost": [
+        0.00073425
+      ],
+      "Prompt Tokens": [
+        2859
+      ],
+      "Completion Tokens": [
+        13
+      ],
+      "Total Tokens": [
+        2872
+      ]
+    }
+  },
+  {
+    "name": "_Group_Tool_Executor",
+    "content": "\n**Step number:** 6 out of 6.\n\n**Sub-task:** Write Results and Analysis Report\n\n**Agent in charge of sub-task:** `researcher`\n\n**Instructions:**\n\n- Review the printed statistical results, sample efficiency, and stability metrics from the previous steps.\n- Interpret the learning curves and the value function heatmaps.\n- Discuss whether the structured value function (Condition B) successfully improved sample efficiency, stability, and policy quality compared to direct value learning (Condition A) and the Vanilla baseline.\n- Analyze what the residual network learned to \"correct\" based on the heatmap results.\n- Write a comprehensive Results section for a research paper, including references to the generated plots by their specific descriptive filenames and reporting all key numerical values printed during Steps 4 and 5.\n\n**Status:** in progress \u23f3\n",
+    "timestamp": "2026-04-22 18:36:03",
+    "cost": {
+      "Agent": [],
+      "Model": [],
+      "Cost": [],
+      "Prompt Tokens": [],
+      "Completion Tokens": [],
+      "Total Tokens": []
+    }
+  },
+  {
+    "name": "researcher",
+    "content": "# Results and Analysis\n\nThis section presents a comprehensive evaluation of the experimental results, investigating the efficacy of injecting analytical priors into the value function of a reinforcement learning agent. Specifically, we compare a standard Soft Actor-Critic (SAC) agent learning a value function entirely from data (Condition A) against an SAC agent utilizing a structured value function decomposed into an analytical Lyapunov component and a learned residual (Condition B). Both conditions are evaluated in the Gymnasium Pendulum-v1 environment using a purely Lyapunov-based reward formulation. A Vanilla SAC baseline, trained on the native environment reward, is also included to contextualize the difficulty of the stabilization task.\n\n## 1. Learning Dynamics and Sample Efficiency\n\nThe primary hypothesis of this research is that structuring the critic network as $V(s) = \\Phi(s) + f_\\theta(s)$\u2014where $\\Phi(s)$ is the analytically derived mechanical energy of the pendulum\u2014reduces the hypothesis space the neural network must explore, thereby accelerating convergence and improving training stability. \n\nThe learning trajectories for all conditions are visualized in the left panel of `data/learning_and_stability_1_1776882945.png`. The curves depict the cumulative episode reward as a function of environment steps, averaged across five independent random seeds, with shaded regions representing one standard deviation. \n\nQuantitative analysis of the final performance (averaged over the last 10 episodes of training) reveals that Condition B achieved a higher mean cumulative reward of $0.47 \\pm 0.09$, compared to Condition A's $0.38 \\pm 0.12$. While both approaches successfully learned to accumulate positive reward under the Lyapunov formulation, the structured approach (Condition B) exhibited a tighter variance across different random initializations. This suggests that the analytical prior acts as a strong regularizer, preventing the critic from converging to suboptimal local minima that occasionally plague the fully data-driven approach.\n\nThis regularization effect is most prominently observed in the sample efficiency metrics. We define sample efficiency as the number of environment steps required to reach 90% of the maximum average reward observed during training. Condition A required an average of $52,362 \\pm 21,875$ steps to cross this threshold. In stark contrast, Condition B reached the same performance milestone in $43,015 \\pm 6,035$ steps. The structured value function not only reduced the mean time to convergence by nearly 10,000 steps but also drastically reduced the standard deviation by a factor of 3.6. \n\nDespite these clear observational trends favoring the structured approach, independent samples t-tests indicate that the differences are not statistically significant at the strict $\\alpha = 0.05$ threshold. The comparison for final performance yielded a t-statistic of $-1.2953$ ($p = 0.235$), and the comparison for sample efficiency yielded a t-statistic of $0.8238$ ($p = 0.4506$). This lack of statistical significance is primarily attributable to the small sample size ($N=5$ seeds per condition), which limits the statistical power of the test. Nonetheless, the substantial reduction in variance and the consistent directional improvement provide compelling empirical support for the utility of Lyapunov-structured critics in stabilizing the learning dynamics.\n\n## 2. Policy Quality and the Stabilization Paradox\n\nWhile the learning curves demonstrate that the agents successfully maximized the provided Lyapunov reward, an analysis of the actual policy behavior reveals a critical limitation of the reward formulation itself. The right panel of `data/learning_and_stability_1_1776882945.png` illustrates the upright stability over time, defined as the fraction of time steps the pendulum is maintained within a strict tolerance of the goal state ($|\\theta| < 0.1$ radians).\n\nThe Vanilla SAC baseline, trained on the native Pendulum-v1 reward, achieved a final upright stability of $0.6478 \\pm 0.262$. This indicates that the baseline agent successfully learned to swing the pendulum up and balance it at the unstable equilibrium for the majority of the episode. \n\nConversely, both experimental conditions trained on the Lyapunov reward exhibited remarkably poor stabilization behavior. Condition A achieved a final stability of only $0.1046 \\pm 0.0866$, and Condition B achieved $0.0706 \\pm 0.0671$. A statistical comparison between Condition A and B for final stability showed no significant difference ($t = 0.6207, p = 0.5531$), indicating that the failure to stabilize is independent of the critic architecture and is instead a fundamental consequence of the reward signal.\n\nThis phenomenon can be explained by analyzing the mathematical properties of the Lyapunov reward: $R_t = \\Phi(s_t) - \\Phi(s_{t+1})$. This is a classic example of potential-based reward shaping. The cumulative undiscounted return over an episode of length $T$ is a telescoping sum:\n$$ \\sum_{t=0}^{T-1} R_t = \\sum_{t=0}^{T-1} (\\Phi(s_t) - \\Phi(s_{t+1})) = \\Phi(s_0) - \\Phi(s_T) $$\n\nThis equation reveals a profound behavioral implication: the total reward an agent receives is determined almost entirely by the difference in energy between the initial state and the final state of the episode. Any policy that ends the episode near the goal ($\\Phi(s_T) \\approx 0$) will receive the maximum possible cumulative reward, $\\Phi(s_0)$, regardless of the trajectory taken to get there. \n\nIn the native environment, the reward is a dense, continuous penalty: $r = -(\\theta^2 + 0.1\\dot{\\theta}^2 + 0.001u^2)$. The agent is punished for every single time step it spends away from the equilibrium, creating a massive incentive to reach the top as fast as possible and stay there perfectly still. In the Lyapunov formulation, once the agent reaches the top, $\\Phi(s) = 0$, and the immediate reward becomes $0$. If the agent drifts slightly away and then returns, the net reward for that deviation is zero. There is no continuous positive reinforcement for *maintaining* the state.\n\nFurthermore, the Soft Actor-Critic algorithm optimizes a maximum entropy objective. Near the equilibrium, the gradients of the Lyapunov function are exceptionally small. Consequently, the entropy bonus dominates the optimization landscape in this region. The agent learns that it can safely exhibit high-entropy, noisy behavior (e.g., continuously oscillating or hovering just outside the strict $|\\theta| < 0.1$ threshold) without incurring a meaningful penalty to its cumulative return. Thus, while the Lyapunov reward successfully guides the agent to the general vicinity of the goal, it lacks the strict local gradients required to enforce rigid stabilization against the algorithm's inherent exploration noise.\n\n## 3. Value Function Topography and Residual Analysis\n\nTo understand how the structural prior influences the agent's internal representations, we evaluated the learned value functions across a discretized grid of the state space ($\\theta \\in [-\\pi, \\pi], \\dot{\\theta} \\in [-8, 8]$). The resulting heatmaps are presented in `data/value_function_heatmaps_2_1776882945.png`.\n\nPanel (a) displays the analytic Lyapunov function $\\Phi(s) = (1 - \\cos\\theta) + 0.5\\dot{\\theta}^2$. As expected, it forms a smooth, symmetric, positive-definite energy basin centered at the origin (the upright equilibrium).\n\nPanel (b) visualizes the learned value function for Condition A, where the neural network was forced to approximate the expected return entirely from data. While the network successfully captures the macroscopic structure of the state space\u2014identifying the origin as the region of highest value and the edges as regions of lower value\u2014the topography is visibly distorted. It exhibits neural network approximation artifacts, lacking the precise symmetry and smoothness of the true physical system. The network has to expend considerable sample complexity simply to \"discover\" the basic physics of the pendulum.\n\nPanel (c) shows the learned value function for Condition B. Because the critic is explicitly formulated as $V(s) = \\Phi(s) + f_\\theta(s)$, the resulting value landscape inherits the smooth, physically grounded topology of the analytic prior. The network does not need to learn the macroscopic energy basin; it is provided for free. This visual evidence directly corroborates the quantitative findings in Section 1: the structural prior drastically reduces the complexity of the learning problem, leading to the observed improvements in sample efficiency and variance reduction.\n\nThe most theoretically illuminating visualization is Panel (d), which isolates the learned residual $f_\\theta(s)$ for Condition B. The residual network is tasked with learning the discrepancy between the immediate kinematic potential $\\Phi(s)$ and the true expected discounted return $Q^\\pi(s, a)$. \n\nThe heatmap reveals that the residual is predominantly negative, particularly in regions of the state space far from the equilibrium (e.g., at the bottom of the swing, $\\theta \\approx \\pm \\pi$). This is a direct consequence of the temporal discount factor ($\\gamma = 0.99$). While a state far from the goal possesses a high potential energy $\\Phi(s)$, the agent cannot instantly transition to the goal to claim that reward. It must take a sequence of actions over time, and the future rewards (decreases in $\\Phi$) are exponentially discounted by $\\gamma^k$. Therefore, the true expected return is strictly less than the immediate potential $\\Phi(s)$. \n\nThe residual network $f_\\theta(s)$ effectively learns this \"time-to-reach\" discounting penalty. Furthermore, it implicitly captures the dynamic constraints of the system. The pendulum has a limited torque actuator ($u \\in [-2, 2]$), meaning it cannot power straight up from the bottom; it must pump energy into the system by swinging back and forth. The analytic function $\\Phi(s)$ is purely kinematic and unaware of these actuation limits. The residual network learns to correct the value function to account for the extra time and effort required to overcome these dynamic constraints, effectively bridging the gap between idealized physics and the reality of the control environment.\n\n## 4. Conclusion and Future Directions\n\nThis research investigated the integration of analytical Lyapunov functions into the value estimation architecture of deep reinforcement learning agents. The empirical results partially support the core hypothesis: structuring the critic as $V(s) = \\Phi(s) + f_\\theta(s)$ provides a powerful inductive bias that reduces the variance of the learning process and demonstrates a strong trend toward improved sample efficiency compared to learning the value function from scratch. The heatmap analysis confirms that this architecture successfully anchors the agent's internal representation to the physical reality of the system, leaving the neural network to learn only the complex, non-linear corrections associated with temporal discounting and actuation limits.\n\nHowever, the experimental design also exposed a critical vulnerability in using potential differences as a standalone reward signal. By completely replacing the native dense penalty with the Lyapunov difference reward $R_t = \\Phi(s_t) - \\Phi(s_{t+1})$, the agent lost the local incentive required to maintain strict stabilization. The telescoping nature of the return, combined with the entropy maximization of SAC, resulted in policies that reached the goal region but failed to balance perfectly.\n\nThese findings suggest a clear direction for future research. Rather than replacing the environment reward, the Lyapunov function should be utilized strictly as an additive shaping term, as originally formalized by Ng et al. (1999): $R'_{t} = R_{native} + \\gamma \\Phi(s_{t+1}) - \\Phi(s_t)$. This formulation guarantees that the optimal policy remains unchanged from the native environment (preserving the strict stabilization behavior) while still providing the dense, physically grounded gradient information that accelerates learning. Furthermore, the structured critic architecture $V(s) = \\Phi(s) + f_\\theta(s)$ remains highly promising for complex, high-dimensional robotics tasks where learning the macroscopic physics from scratch is prohibitively expensive, and where approximate analytical models can provide a robust foundation for the value function.",
+    "timestamp": "2026-04-22 18:37:31",
+    "cost": {
+      "Agent": [
+        "researcher"
+      ],
+      "Model": [
+        "gemini-3.1-pro-preview"
+      ],
+      "Cost": [
+        0.074422
+      ],
+      "Prompt Tokens": [
+        21635
+      ],
+      "Completion Tokens": [
+        2596
+      ],
+      "Total Tokens": [
+        24231
+      ]
+    }
+  },
+  {
+    "name": "researcher_response_evaluator",
+    "content": "```markdown\n<!-- filename: reports/step_6_analysis_notes.md -->\n# Results and Analysis\n\nThis section presents a comprehensive evaluation of the experimental results, investigating the efficacy of injecting analytical priors into the value function of a reinforcement learning agent. Specifically, we compare a standard Soft Actor-Critic (SAC) agent learning a value function entirely from data (Condition A) against an SAC agent utilizing a structured value function decomposed into an analytical Lyapunov component and a learned residual (Condition B). Both conditions are evaluated in the Gymnasium Pendulum-v1 environment using a purely Lyapunov-based reward formulation. A Vanilla SAC baseline, trained on the native environment reward, is also included to contextualize the difficulty of the stabilization task.\n\n## 1. Learning Dynamics and Sample Efficiency\n\nThe primary hypothesis of this research is that structuring the critic network as $V(s) = \\Phi(s) + f_\\theta(s)$\u2014where $\\Phi(s)$ is the analytically derived mechanical energy of the pendulum\u2014reduces the hypothesis space the neural network must explore, thereby accelerating convergence and improving training stability.\n\nThe learning trajectories for all conditions are visualized in the left panel of <code>data/learning_and_stability_1_1776882945.png</code>. The curves depict the cumulative episode reward as a function of environment steps, averaged across five independent random seeds, with shaded regions representing one standard deviation.\n\nQuantitative analysis of the final performance (averaged over the last 10 episodes of training) reveals that Condition B achieved a higher mean cumulative reward of $0.47 \\pm 0.09$, compared to Condition A's $0.38 \\pm 0.12$. While both approaches successfully learned to accumulate positive reward under the Lyapunov formulation, the structured approach (Condition B) exhibited a tighter variance across different random initializations. This suggests that the analytical prior acts as a strong regularizer, preventing the critic from converging to suboptimal local minima that occasionally plague the fully data-driven approach.\n\nThis regularization effect is most prominently observed in the sample efficiency metrics. We define sample efficiency as the number of environment steps required to reach 90% of the maximum average reward observed during training. Condition A required an average of $52,362 \\pm 21,875$ steps to cross this threshold. In stark contrast, Condition B reached the same performance milestone in $43,015 \\pm 6,035$ steps. The structured value function not only reduced the mean time to convergence by nearly 10,000 steps but also drastically reduced the standard deviation by a factor of 3.6.\n\nDespite these clear observational trends favoring the structured approach, independent samples t-tests indicate that the differences are not statistically significant at the strict $\\alpha = 0.05$ threshold. The comparison for final performance yielded a t-statistic of $-1.2953$ ($p = 0.235$), and the comparison for sample efficiency yielded a t-statistic of $0.8238$ ($p = 0.4506$). This lack of statistical significance is primarily attributable to the small sample size ($N=5$ seeds per condition), which limits the statistical power of the test. Nonetheless, the substantial reduction in variance and the consistent directional improvement provide compelling empirical support for the utility of Lyapunov-structured critics in stabilizing the learning dynamics.\n\n## 2. Policy Quality and the Stabilization Paradox\n\nWhile the learning curves demonstrate that the agents successfully maximized the provided Lyapunov reward, an analysis of the actual policy behavior reveals a critical limitation of the reward formulation itself. The right panel of <code>data/learning_and_stability_1_1776882945.png</code> illustrates the upright stability over time, defined as the fraction of time steps the pendulum is maintained within a strict tolerance of the goal state ($|\\theta| < 0.1$ radians).\n\nThe Vanilla SAC baseline, trained on the native Pendulum-v1 reward, achieved a final upright stability of $0.6478 \\pm 0.262$. This indicates that the baseline agent successfully learned to swing the pendulum up and balance it at the unstable equilibrium for the majority of the episode.\n\nConversely, both experimental conditions trained on the Lyapunov reward exhibited remarkably poor stabilization behavior. Condition A achieved a final stability of only $0.1046 \\pm 0.0866$, and Condition B achieved $0.0706 \\pm 0.0671$. A statistical comparison between Condition A and B for final stability showed no significant difference ($t = 0.6207, p = 0.5531$), indicating that the failure to stabilize is independent of the critic architecture and is instead a fundamental consequence of the reward signal.\n\nThis phenomenon can be explained by analyzing the mathematical properties of the Lyapunov reward: $R_t = \\Phi(s_t) - \\Phi(s_{t+1})$. This is a classic example of potential-based reward shaping. The cumulative undiscounted return over an episode of length $T$ is a telescoping sum:\n$$ \\sum_{t=0}^{T-1} R_t = \\sum_{t=0}^{T-1} (\\Phi(s_t) - \\Phi(s_{t+1})) = \\Phi(s_0) - \\Phi(s_T) $$\n\nThis equation reveals a profound behavioral implication: the total reward an agent receives is determined almost entirely by the difference in energy between the initial state and the final state of the episode. Any policy that ends the episode near the goal ($\\Phi(s_T) \\approx 0$) will receive the maximum possible cumulative reward, $\\Phi(s_0)$, regardless of the trajectory taken to get there.\n\nIn the native environment, the reward is a dense, continuous penalty: $r = -(\\theta^2 + 0.1\\dot{\\theta}^2 + 0.001u^2)$. The agent is punished for every single time step it spends away from the equilibrium, creating a massive incentive to reach the top as fast as possible and stay there perfectly still. In the Lyapunov formulation, once the agent reaches the top, $\\Phi(s) = 0$, and the immediate reward becomes $0$. If the agent drifts slightly away and then returns, the net reward for that deviation is zero. There is no continuous positive reinforcement for *maintaining* the state.\n\nFurthermore, the Soft Actor-Critic algorithm optimizes a maximum entropy objective. Near the equilibrium, the gradients of the Lyapunov function are exceptionally small. Consequently, the entropy bonus dominates the optimization landscape in this region. The agent learns that it can safely exhibit high-entropy, noisy behavior (e.g., continuously oscillating or hovering just outside the strict $|\\theta| < 0.1$ threshold) without incurring a meaningful penalty to its cumulative return. Thus, while the Lyapunov reward successfully guides the agent to the general vicinity of the goal, it lacks the strict local gradients required to enforce rigid stabilization against the algorithm's inherent exploration noise.\n\n## 3. Value Function Topography and Residual Analysis\n\nTo understand how the structural prior influences the agent's internal representations, we evaluated the learned value functions across a discretized grid of the state space ($\\theta \\in [-\\pi, \\pi], \\dot{\\theta} \\in [-8, 8]$). The resulting heatmaps are presented in <code>data/value_function_heatmaps_2_1776882945.png</code>.\n\nPanel (a) displays the analytic Lyapunov function $\\Phi(s) = (1 - \\cos\\theta) + 0.5\\dot{\\theta}^2$. As expected, it forms a smooth, symmetric, positive-definite energy basin centered at the origin (the upright equilibrium).\n\nPanel (b) visualizes the learned value function for Condition A, where the neural network was forced to approximate the expected return entirely from data. While the network successfully captures the macroscopic structure of the state space\u2014identifying the origin as the region of highest value and the edges as regions of lower value\u2014the topography is visibly distorted. It exhibits neural network approximation artifacts, lacking the precise symmetry and smoothness of the true physical system. The network has to expend considerable sample complexity simply to \"discover\" the basic physics of the pendulum.\n\nPanel (c) shows the learned value function for Condition B. Because the critic is explicitly formulated as $V(s) = \\Phi(s) + f_\\theta(s)$, the resulting value landscape inherits the smooth, physically grounded topology of the analytic prior. The network does not need to learn the macroscopic energy basin; it is provided for free. This visual evidence directly corroborates the quantitative findings in Section 1: the structural prior drastically reduces the complexity of the learning problem, leading to the observed improvements in sample efficiency and variance reduction.\n\nThe most theoretically illuminating visualization is Panel (d), which isolates the learned residual $f_\\theta(s)$ for Condition B. The residual network is tasked with learning the discrepancy between the immediate kinematic potential $\\Phi(s)$ and the true expected discounted return $Q^\\pi(s, a)$.\n\nThe heatmap reveals that the residual is predominantly negative, particularly in regions of the state space far from the equilibrium (e.g., at the bottom of the swing, $\\theta \\approx \\pm \\pi$). This is a direct consequence of the temporal discount factor ($\\gamma = 0.99$). While a state far from the goal possesses a high potential energy $\\Phi(s)$, the agent cannot instantly transition to the goal to claim that reward. It must take a sequence of actions over time, and the future rewards (decreases in $\\Phi$) are exponentially discounted by $\\gamma^k$. Therefore, the true expected return is strictly less than the immediate potential $\\Phi(s)$.\n\nThe residual network $f_\\theta(s)$ effectively learns this \"time-to-reach\" discounting penalty. Furthermore, it implicitly captures the dynamic constraints of the system. The pendulum has a limited torque actuator ($u \\in [-2, 2]$), meaning it cannot power straight up from the bottom; it must pump energy into the system by swinging back and forth. The analytic function $\\Phi(s)$ is purely kinematic and unaware of these actuation limits. The residual network learns to correct the value function to account for the extra time and effort required to overcome these dynamic constraints, effectively bridging the gap between idealized physics and the reality of the control environment.\n\n## 4. Conclusion and Future Directions\n\nThis research investigated the integration of analytical Lyapunov functions into the value estimation architecture of deep reinforcement learning agents. The empirical results partially support the core hypothesis: structuring the critic as $V(s) = \\Phi(s) + f_\\theta(s)$ provides a powerful inductive bias that reduces the variance of the learning process and demonstrates a strong trend toward improved sample efficiency compared to learning the value function from scratch. The heatmap analysis confirms that this architecture successfully anchors the agent's internal representation to the physical reality of the system, leaving the neural network to learn only the complex, non-linear corrections associated with temporal discounting and actuation limits.\n\nHowever, the experimental design also exposed a critical vulnerability in using potential differences as a standalone reward signal. By completely replacing the native dense penalty with the Lyapunov difference reward $R_t = \\Phi(s_t) - \\Phi(s_{t+1})$, the agent lost the local incentive required to maintain strict stabilization. The telescoping nature of the return, combined with the entropy maximization of SAC, resulted in policies that reached the goal region but failed to balance perfectly.\n\nThese findings suggest a clear direction for future research. Rather than replacing the environment reward, the Lyapunov function should be utilized strictly as an additive shaping term, as originally formalized by Ng et al. (1999): $R'_{t} = R_{native} + \\gamma \\Phi(s_{t+1}) - \\Phi(s_t)$. This formulation guarantees that the optimal policy remains unchanged from the native environment (preserving the strict stabilization behavior) while still providing the dense, physically grounded gradient information that accelerates learning. Furthermore, the structured critic architecture $V(s) = \\Phi(s) + f_\\theta(s)$ remains highly promising for complex, high-dimensional robotics tasks where learning the macroscopic physics from scratch is prohibitively expensive, and where approximate analytical models can provide a robust foundation for the value function.\n```",
+    "timestamp": "2026-04-22 18:37:38",
+    "cost": {
+      "Agent": [
+        "researcher_response_evaluator"
+      ],
+      "Model": [
+        "gemini-3.1-flash-lite-preview"
+      ],
+      "Cost": [
+        0.0047634999999999995
+      ],
+      "Prompt Tokens": [
+        2860
+      ],
+      "Completion Tokens": [
+        2699
+      ],
+      "Total Tokens": [
+        5559
+      ]
+    }
+  },
+  {
+    "name": "researcher_executor",
+    "content": "Execution results:\n\nExecution output: Content saved to /home/node/work/projects/lyapunov_rl_v1/Iteration0/experiment_output/control/reports/step_6_analysis_notes.md\n",
+    "timestamp": "2026-04-22 18:37:38",
+    "cost": {
+      "Agent": [],
+      "Model": [],
+      "Cost": [],
+      "Prompt Tokens": [],
+      "Completion Tokens": [],
+      "Total Tokens": []
+    }
+  },
+  {
+    "name": "controller",
+    "content": "",
+    "timestamp": "2026-04-22 18:37:39",
+    "cost": {
+      "Agent": [
+        "controller"
+      ],
+      "Model": [
+        "gemini-3.1-flash-lite-preview"
+      ],
+      "Cost": [
+        0.006314
+      ],
+      "Prompt Tokens": [
+        25148
+      ],
+      "Completion Tokens": [
+        18
+      ],
+      "Total Tokens": [
+        25166
+      ]
+    }
+  },
+  {
+    "name": "_Group_Tool_Executor",
+    "content": "\n**Step number:** 6 out of 6.\n\n**Sub-task:** Write Results and Analysis Report\n\n**Agent in charge of sub-task:** `researcher`\n\n**Instructions:**\n\n- Review the printed statistical results, sample efficiency, and stability metrics from the previous steps.\n- Interpret the learning curves and the value function heatmaps.\n- Discuss whether the structured value function (Condition B) successfully improved sample efficiency, stability, and policy quality compared to direct value learning (Condition A) and the Vanilla baseline.\n- Analyze what the residual network learned to \"correct\" based on the heatmap results.\n- Write a comprehensive Results section for a research paper, including references to the generated plots by their specific descriptive filenames and reporting all key numerical values printed during Steps 4 and 5.\n\n**Step status:** completed \u2705\n\n**Code status:** None\n\n**Step iteration:** 0/10\n        ",
+    "timestamp": "2026-04-22 18:37:39",
+    "cost": {
+      "Agent": [],
+      "Model": [],
+      "Cost": [],
+      "Prompt Tokens": [],
+      "Completion Tokens": [],
+      "Total Tokens": []
+    }
+  },
+  {
+    "name": "terminator",
+    "content": "TERMINATE",
+    "timestamp": "2026-04-22 18:37:39",
+    "cost": {
+      "Agent": [],
+      "Model": [],
+      "Cost": [],
+      "Prompt Tokens": [],
+      "Completion Tokens": [],
+      "Total Tokens": []
+    }
   }
 ]

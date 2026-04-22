@@ -5,113 +5,116 @@ sys.path.insert(0, os.path.abspath("codebase"))
 sys.path.insert(0, "/home/node/data/compsep_data/")
 import pickle
 import numpy as np
-import pandas as pd
-from scipy import stats
 import torch
+import scipy.stats as stats
 import gymnasium as gym
 from step_1 import SAC, SACArgs, compute_phi_tensor
 
+def safe_ttest(a, b):
+    if np.all(a == b):
+        return 0.0, 1.0
+    elif np.var(a) == 0 and np.var(b) == 0:
+        return 0.0, 1.0
+    else:
+        return stats.ttest_ind(a, b, equal_var=False)
+
 def main():
-    print('Loading training logs...')
-    with open(os.path.join('data', 'step_2_logs.pkl'), 'rb') as f:
+    with open('data/step_2_logs.pkl', 'rb') as f:
         logs_2 = pickle.load(f)
-    with open(os.path.join('data', 'step_3_logs.pkl'), 'rb') as f:
+    with open('data/step_3_logs.pkl', 'rb') as f:
         logs_3 = pickle.load(f)
-    all_logs = {**logs_2, **logs_3}
-    conditions = ['vanilla', 'condition_A', 'condition_B']
-    step_grid = np.linspace(0, 100000, 1000)
-    learning_curves = {cond: [] for cond in conditions}
-    final_rewards = {cond: [] for cond in conditions}
-    final_upright = {cond: [] for cond in conditions}
-    for cond in conditions:
+    logs = {'vanilla': logs_2['vanilla'], 'condition_A': logs_2['condition_A'], 'condition_B': logs_3['condition_B']}
+    step_grid = np.linspace(0, 100000, 200)
+    learning_curves = {}
+    final_performances = {}
+    final_stabilities = {}
+    for condition in ['vanilla', 'condition_A', 'condition_B']:
+        interp_rewards = []
+        final_perfs = []
+        final_stabs = []
         for seed in range(5):
-            logs = all_logs[cond][seed]
-            cum_steps = np.cumsum(logs['episode_lengths'])
-            rewards = logs['episode_rewards']
-            smoothed_rewards = pd.Series(rewards).rolling(10, min_periods=1).mean().values
-            interp_rewards = np.interp(step_grid, cum_steps, smoothed_rewards)
-            learning_curves[cond].append(interp_rewards)
-            final_rewards[cond].append(np.mean(rewards[-10:]))
-            final_upright[cond].append(logs['eval_upright_fractions'][-1])
-    mean_curves = {cond: np.mean(learning_curves[cond], axis=0) for cond in conditions}
-    std_curves = {cond: np.std(learning_curves[cond], axis=0) for cond in conditions}
-    max_lyap = max(np.max(mean_curves['condition_A']), np.max(mean_curves['condition_B']))
-    threshold_lyap = 0.9 * max_lyap
-    max_vanilla = np.max(mean_curves['vanilla'])
-    min_vanilla = np.min(mean_curves['vanilla'])
-    threshold_vanilla = max_vanilla - 0.1 * (max_vanilla - min_vanilla)
-    sample_efficiency = {cond: [] for cond in conditions}
-    for cond in conditions:
-        thresh = threshold_vanilla if cond == 'vanilla' else threshold_lyap
+            ep_lengths = logs[condition][seed]['episode_lengths']
+            ep_rewards = logs[condition][seed]['episode_rewards']
+            cum_steps = np.cumsum(ep_lengths)
+            interp_rew = np.interp(step_grid, cum_steps, ep_rewards)
+            interp_rewards.append(interp_rew)
+            final_perf = np.mean(ep_rewards[-10:]) if len(ep_rewards) >= 10 else np.mean(ep_rewards)
+            final_perfs.append(final_perf)
+            final_stab = logs[condition][seed]['eval_upright_fractions'][-1]
+            final_stabs.append(final_stab)
+        learning_curves[condition] = np.array(interp_rewards)
+        final_performances[condition] = np.array(final_perfs)
+        final_stabilities[condition] = np.array(final_stabs)
+    mean_curve_A = np.mean(learning_curves['condition_A'], axis=0)
+    mean_curve_B = np.mean(learning_curves['condition_B'], axis=0)
+    max_reward = max(np.max(mean_curve_A), np.max(mean_curve_B))
+    threshold = 0.9 * max_reward
+    sample_efficiencies = {}
+    for condition in ['condition_A', 'condition_B']:
+        effs = []
         for seed in range(5):
-            curve = learning_curves[cond][seed]
-            idx = np.where(curve >= thresh)[0]
+            curve = learning_curves[condition][seed]
+            idx = np.where(curve >= threshold)[0]
             if len(idx) > 0:
-                sample_efficiency[cond].append(step_grid[idx[0]])
+                effs.append(step_grid[idx[0]])
             else:
-                sample_efficiency[cond].append(100000.0)
-    print('\n' + '='*50)
-    print('PERFORMANCE METRICS SUMMARY')
-    print('='*50)
-    for cond in conditions:
-        print('\nCondition: ' + cond)
-        print('  Final Reward (last 10 eps): ' + str(np.mean(final_rewards[cond])) + ' +/- ' + str(np.std(final_rewards[cond])))
-        print('  Final Upright Fraction:     ' + str(np.mean(final_upright[cond])) + ' +/- ' + str(np.std(final_upright[cond])))
-        thresh_print = threshold_vanilla if cond == 'vanilla' else threshold_lyap
-        print('  Sample Efficiency (steps to ' + str(thresh_print) + '): ' + str(np.mean(sample_efficiency[cond])) + ' +/- ' + str(np.std(sample_efficiency[cond])))
-    print('\n' + '='*50)
-    print('STATISTICAL TESTS (Condition A vs Condition B)')
-    print('='*50)
-    t_stat_perf, p_val_perf = stats.ttest_ind(final_rewards['condition_A'], final_rewards['condition_B'])
-    print('Final Performance t-test:      t = ' + str(t_stat_perf) + ', p = ' + str(p_val_perf))
-    t_stat_eff, p_val_eff = stats.ttest_ind(sample_efficiency['condition_A'], sample_efficiency['condition_B'])
-    print('Sample Efficiency t-test:      t = ' + str(t_stat_eff) + ', p = ' + str(p_val_eff))
-    t_stat_upright, p_val_upright = stats.ttest_ind(final_upright['condition_A'], final_upright['condition_B'])
-    print('Final Upright Stability t-test: t = ' + str(t_stat_upright) + ', p = ' + str(p_val_upright))
-    median_seed_A = np.argsort(final_rewards['condition_A'])[2]
-    median_seed_B = np.argsort(final_rewards['condition_B'])[2]
-    print('\n' + '='*50)
-    print('MEDIAN SEED SELECTION')
-    print('='*50)
-    print('Median seed for Condition A: ' + str(median_seed_A) + ' (Reward: ' + str(final_rewards['condition_A'][median_seed_A]) + ')')
-    print('Median seed for Condition B: ' + str(median_seed_B) + ' (Reward: ' + str(final_rewards['condition_B'][median_seed_B]) + ')')
-    print('\nGenerating 2D state grid and computing value functions...')
+                effs.append(100000.0)
+        sample_efficiencies[condition] = np.array(effs)
+    t_stat_perf, p_val_perf = safe_ttest(final_performances['condition_A'], final_performances['condition_B'])
+    t_stat_eff, p_val_eff = safe_ttest(sample_efficiencies['condition_A'], sample_efficiencies['condition_B'])
+    t_stat_stab, p_val_stab = safe_ttest(final_stabilities['condition_A'], final_stabilities['condition_B'])
+    print('=== Performance Metrics ===')
+    for cond in ['vanilla', 'condition_A', 'condition_B']:
+        print('Condition: ' + cond)
+        print('  Final Performance (Avg last 10 eps): ' + str(round(np.mean(final_performances[cond]), 2)) + ' +/- ' + str(round(np.std(final_performances[cond]), 2)))
+        print('  Final Upright Stability: ' + str(round(np.mean(final_stabilities[cond]), 4)) + ' +/- ' + str(round(np.std(final_stabilities[cond]), 4)))
+        if cond in sample_efficiencies:
+            print('  Sample Efficiency (steps to 90% max reward): ' + str(round(np.mean(sample_efficiencies[cond]))) + ' +/- ' + str(round(np.std(sample_efficiencies[cond]))))
+    print('\n=== Statistical Tests (Condition A vs Condition B) ===')
+    print('Final Performance: t-stat = ' + str(round(t_stat_perf, 4)) + ', p-value = ' + str(round(p_val_perf, 4)))
+    print('Sample Efficiency: t-stat = ' + str(round(t_stat_eff, 4)) + ', p-value = ' + str(round(p_val_eff, 4)))
+    print('Final Stability:   t-stat = ' + str(round(t_stat_stab, 4)) + ', p-value = ' + str(round(p_val_stab, 4)))
+    median_seed_A = int(np.argsort(final_performances['condition_A'])[2])
+    median_seed_B = int(np.argsort(final_performances['condition_B'])[2])
     theta_vals = np.linspace(-np.pi, np.pi, 100)
-    dot_theta_vals = np.linspace(-8, 8, 100)
-    THETA, DOT_THETA = np.meshgrid(theta_vals, dot_theta_vals, indexing='ij')
-    cos_theta = np.cos(THETA)
-    sin_theta = np.sin(THETA)
-    grid_states = np.stack([cos_theta.flatten(), sin_theta.flatten(), DOT_THETA.flatten()], axis=1)
+    theta_dot_vals = np.linspace(-8, 8, 100)
+    THETA, THETA_DOT = np.meshgrid(theta_vals, theta_dot_vals)
+    states = np.stack([np.cos(THETA).flatten(), np.sin(THETA).flatten(), THETA_DOT.flatten()], axis=1)
     env = gym.make('Pendulum-v1')
     args_A = SACArgs()
     args_A.structured = False
-    agent_A = SAC(3, env.action_space, args_A)
+    agent_A = SAC(env.observation_space.shape[0], env.action_space, args_A)
     agent_A.critic.load_state_dict(torch.load(os.path.join('data', 'condition_A_critic_seed_' + str(median_seed_A) + '.pth'), map_location=agent_A.device))
     agent_A.policy.load_state_dict(torch.load(os.path.join('data', 'condition_A_policy_seed_' + str(median_seed_A) + '.pth'), map_location=agent_A.device))
     args_B = SACArgs()
     args_B.structured = True
-    agent_B = SAC(3, env.action_space, args_B)
+    agent_B = SAC(env.observation_space.shape[0], env.action_space, args_B)
     agent_B.critic.load_state_dict(torch.load(os.path.join('data', 'condition_B_critic_seed_' + str(median_seed_B) + '.pth'), map_location=agent_B.device))
     agent_B.policy.load_state_dict(torch.load(os.path.join('data', 'condition_B_policy_seed_' + str(median_seed_B) + '.pth'), map_location=agent_B.device))
-    grid_states_tensor = torch.FloatTensor(grid_states).to(agent_A.device)
+    states_tensor = torch.FloatTensor(states).to(agent_A.device)
     with torch.no_grad():
-        phi_tensor = compute_phi_tensor(grid_states_tensor)
-        phi_grid = phi_tensor.cpu().numpy().reshape(100, 100)
-        _, _, mean_action_A = agent_A.policy.sample(grid_states_tensor)
-        q1_A, q2_A = agent_A.critic(grid_states_tensor, mean_action_A)
-        q_A_grid = torch.min(q1_A, q2_A).cpu().numpy().reshape(100, 100)
-        _, _, mean_action_B = agent_B.policy.sample(grid_states_tensor)
-        q1_B, q2_B = agent_B.critic(grid_states_tensor, mean_action_B)
-        q_B_grid = torch.min(q1_B, q2_B).cpu().numpy().reshape(100, 100)
-        residual_B_grid = q_B_grid - phi_grid
-    metrics = {'step_grid': step_grid, 'mean_curves': mean_curves, 'std_curves': std_curves, 'final_rewards': final_rewards, 'final_upright': final_upright, 'sample_efficiency': sample_efficiency, 't_stat_perf': t_stat_perf, 'p_val_perf': p_val_perf, 't_stat_eff': t_stat_eff, 'p_val_eff': p_val_eff, 'median_seed_A': median_seed_A, 'median_seed_B': median_seed_B}
-    metrics_path = os.path.join('data', 'computed_metrics.pkl')
-    with open(metrics_path, 'wb') as f:
+        mean_A, _ = agent_A.policy(states_tensor)
+        action_A = torch.tanh(mean_A) * agent_A.policy.action_scale + agent_A.policy.action_bias
+        q1_A, q2_A = agent_A.critic(states_tensor, action_A)
+        q_A = torch.min(q1_A, q2_A).cpu().numpy().reshape(100, 100)
+        mean_B, _ = agent_B.policy(states_tensor)
+        action_B = torch.tanh(mean_B) * agent_B.policy.action_scale + agent_B.policy.action_bias
+        q1_B, q2_B = agent_B.critic(states_tensor, action_B)
+        q_B = torch.min(q1_B, q2_B).cpu().numpy().reshape(100, 100)
+        phi = compute_phi_tensor(states_tensor).cpu().numpy().reshape(100, 100)
+        residual_B = q_B - phi
+    eval_steps = logs['vanilla'][0]['eval_steps']
+    eval_stabilities = {}
+    for condition in ['vanilla', 'condition_A', 'condition_B']:
+        stabs = []
+        for seed in range(5):
+            stabs.append(logs[condition][seed]['eval_upright_fractions'])
+        eval_stabilities[condition] = np.array(stabs)
+    metrics = {'step_grid': step_grid, 'learning_curves': learning_curves, 'eval_steps': eval_steps, 'eval_stabilities': eval_stabilities, 'final_performances': final_performances, 'final_stabilities': final_stabilities, 'sample_efficiencies': sample_efficiencies, 't_tests': {'performance': (t_stat_perf, p_val_perf), 'efficiency': (t_stat_eff, p_val_eff), 'stability': (t_stat_stab, p_val_stab)}, 'median_seeds': {'condition_A': median_seed_A, 'condition_B': median_seed_B}}
+    with open(os.path.join('data', 'computed_metrics.pkl'), 'wb') as f:
         pickle.dump(metrics, f)
-    grid_path = os.path.join('data', 'grid_data.npz')
-    np.savez(grid_path, theta=THETA, dot_theta=DOT_THETA, phi=phi_grid, q_A=q_A_grid, q_B=q_B_grid, residual_B=residual_B_grid)
-    print('\nMetrics successfully saved to ' + metrics_path)
-    print('Grid data successfully saved to ' + grid_path)
+    np.savez(os.path.join('data', 'grid_data.npz'), theta=THETA, theta_dot=THETA_DOT, phi=phi, q_A=q_A, q_B=q_B, residual_B=residual_B)
+    print('\nData saved to data/computed_metrics.pkl and data/grid_data.npz')
 
 if __name__ == '__main__':
     main()

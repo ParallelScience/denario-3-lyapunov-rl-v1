@@ -1,3 +1,4 @@
+<!-- filename: reports/step_6_analysis_notes.md -->
 # Results and Analysis
 
 This section presents a comprehensive evaluation of the experimental results, investigating the efficacy of injecting analytical priors into the value function of a reinforcement learning agent. Specifically, we compare a standard Soft Actor-Critic (SAC) agent learning a value function entirely from data (Condition A) against an SAC agent utilizing a structured value function decomposed into an analytical Lyapunov component and a learned residual (Condition B). Both conditions are evaluated in the Gymnasium Pendulum-v1 environment using a purely Lyapunov-based reward formulation. A Vanilla SAC baseline, trained on the native environment reward, is also included to contextualize the difficulty of the stabilization task.
