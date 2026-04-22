@@ -1,0 +1,77 @@
+{
+    "sub_tasks": [
+        {
+            "bullet_points": [
+                "Implement a custom Gymnasium environment wrapper for Pendulum-v1 that replaces the native reward with the Lyapunov-based reward: R_t = Phi(s_t) - Phi(s_{t+1}), where Phi(s) = (1 - cos(theta)) + 0.5*dot(theta)^2. Ensure theta is correctly recovered using atan2.",
+                "Implement or extend a Soft Actor-Critic (SAC) algorithm (e.g., by subclassing stable-baselines3 policies or writing a clean PyTorch implementation) to support both a standard critic (Condition A) and a structured critic (Condition B). Note that SAC uses a Q-function Q(s,a) rather than V(s).",
+                "For Condition B, modify the critic architecture so it outputs a structured Q-value: Q(s,a) = Phi(s) + f_theta(s, a). The analytic Phi(s) is computed from the state component of the input before being added to the residual network output f_theta(s, a). Initialize the final layer of the residual network to near-zero.",
+                "Ensure automated entropy tuning (alpha='auto') is supported to adapt to the scale of the Lyapunov reward.",
+                "Write a short test routine (e.g., 1000 steps) to explicitly verify that the Lyapunov reward wrapper produces rewards of the correct sign and magnitude (print a few reward values and confirm Phi values are non-negative), and that both SAC variants initialize and run without errors. Save a dummy success file to disk."
+            ],
+            "sub_task": "Implement Environment Wrapper and SAC Architecture",
+            "sub_task_agent": "engineer"
+        },
+        {
+            "bullet_points": [
+                "Import the environment wrapper and SAC implementations from Step 1.",
+                "Train a Vanilla SAC baseline (using the native Pendulum-v1 reward and standard critic) for 100,000 environment steps across 5 random seeds.",
+                "Train Condition A (using the Lyapunov reward wrapper and standard critic) for 100,000 environment steps across 5 random seeds.",
+                "Use Python's multiprocessing to run the seeds in parallel, but tune the number of parallel workers to the wall-clock budget or run seeds sequentially if parallel execution exceeds the 1800-second limit.",
+                "Hardcode and use specific hyperparameters (learning rate, batch size, replay buffer size, discount factor, network architecture, and update frequency) that will be identical in Step 3 to ensure a fair comparison.",
+                "Implement a periodic evaluation callback: every 10,000 steps, evaluate the policy by calculating the fraction of time steps the pendulum is in the upright region (|theta| < 0.1 rad) over a 1,000-step rollout.",
+                "Save all training logs (cumulative rewards, episode lengths, evaluation metrics) and the final trained model weights to the database path."
+            ],
+            "sub_task": "Train Vanilla SAC and Condition A (Baseline)",
+            "sub_task_agent": "engineer"
+        },
+        {
+            "bullet_points": [
+                "Import the environment wrapper and structured SAC implementations from Step 1.",
+                "Train Condition B (using the Lyapunov reward wrapper and the structured critic) for 100,000 environment steps across 5 random seeds.",
+                "Use Python's multiprocessing to run the seeds in parallel (or sequentially to avoid timeout).",
+                "Use the exact same hyperparameters (learning rate, batch size, replay buffer size, discount factor, network architecture, and update frequency) and periodic evaluation callback (every 10,000 steps) as in Step 2.",
+                "Verify that the near-zero final-layer initialization is active at the start of training by checking and printing that initial Q-value estimates are close to Phi(s).",
+                "Save all training logs and the final trained model weights to the database path."
+            ],
+            "sub_task": "Train Condition B (Structured Critic)",
+            "sub_task_agent": "engineer"
+        },
+        {
+            "bullet_points": [
+                "Load the training logs from Steps 2 and 3.",
+                "Calculate the mean and standard deviation of the learning curves (reward vs. steps) across the 5 seeds for Vanilla, Condition A, and Condition B.",
+                "Calculate sample efficiency (steps required to reach 90% of the maximum average reward) and final upright stability for each condition.",
+                "Perform statistical tests (e.g., t-tests) comparing Condition A and Condition B on final performance and convergence speed. Print the results clearly.",
+                "Generate a 2D grid of states (theta in [-pi, pi], dot(theta) in [-8, 8]).",
+                "Identify the median-performing seed (based on final cumulative reward) for Condition A and Condition B to prevent cherry-picking. Load these representative trained models.",
+                "Compute the analytic Phi(s), the learned Q-value for Condition A, the learned Q-value for Condition B, and the learned residual for Condition B across the grid. For these evaluations, use the deterministic policy action (mean of the actor distribution) instead of a=0.",
+                "Save all computed metrics, statistical results, and grid data to disk as .npy or .csv files."
+            ],
+            "sub_task": "Compute Performance Metrics and Value Function Grids",
+            "sub_task_agent": "engineer"
+        },
+        {
+            "bullet_points": [
+                "Load the computed metrics and grid data from Step 4.",
+                "Create a single multi-panel figure combining the learning curves (cumulative reward vs. environment steps, with mean lines and standard deviation shaded regions) and the upright stability metric over time for all three conditions.",
+                "Create a second figure with subplots for the 2D heatmaps: (a) analytic Phi(s), (b) Condition A learned value, (c) Condition B learned value, and (d) Condition B learned residual.",
+                "Ensure heatmap subplots use a consistent, shared colorbar scale where appropriate (e.g., for panels comparing Condition A and Condition B learned values), and that the residual heatmap employs a diverging colormap centered at zero.",
+                "Ensure all plots have clear titles, axis labels with units, and legends.",
+                "Save all plots as high-resolution PNG files to the database path."
+            ],
+            "sub_task": "Generate Plots and Visualizations",
+            "sub_task_agent": "engineer"
+        },
+        {
+            "bullet_points": [
+                "Review the printed statistical results, sample efficiency, and stability metrics from the previous steps.",
+                "Interpret the learning curves and the value function heatmaps.",
+                "Discuss whether the structured value function (Condition B) successfully improved sample efficiency, stability, and policy quality compared to direct value learning (Condition A) and the Vanilla baseline.",
+                "Analyze what the residual network learned to \"correct\" based on the heatmap results.",
+                "Write a comprehensive Results section for a research paper, including references to the generated plots by their specific descriptive filenames and reporting all key numerical values printed during Steps 4 and 5."
+            ],
+            "sub_task": "Write Results and Analysis Report",
+            "sub_task_agent": "researcher"
+        }
+    ]
+}
