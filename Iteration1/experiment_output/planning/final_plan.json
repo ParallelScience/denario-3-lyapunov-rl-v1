@@ -1,0 +1,63 @@
+{
+    "sub_tasks": [
+        {
+            "bullet_points": [
+                "Implement the Lyapunov reward wrapper for Pendulum-v1 replacing native reward with R_t = Φ(s_t) - Φ(s_{t+1}), where Φ(s) = (1 - cos θ) + 0.5 * θ̇²; recover θ via atan2(sin θ, cos θ)",
+                "Implement a custom SAC algorithm with an actor network and twin Q-critics (two separate Q-networks to take the minimum, as in standard SAC)",
+                "Condition A: standard twin Q-critics that output Q(s,a) directly from a 2-layer MLP",
+                "Condition B: structured twin Q-critics where each network outputs f_θ(s,a) and the total Q-value is Q(s,a) = Φ(s) + f_θ(s,a); initialize the final layer of f_θ to zero so Q(s,a) ≈ Φ(s) at initialization",
+                "Use identical SAC hyperparameters for both conditions: replay buffer size 100k, batch size 256, learning rate 3e-4, γ=0.99, τ=0.005, automatic entropy tuning",
+                "Train both conditions for 100,000 environment steps across 5 random seeds each",
+                "Log per-episode metrics: episode return (Lyapunov reward), upright fraction per episode (fraction of steps within the episode where |θ| < 0.1 rad), and mean critic loss per update",
+                "Save all training logs as CSV files with clearly named columns: condition, seed, step, episode_return, upright_fraction, critic_loss",
+                "Save final model weights for all seeds and both conditions to disk",
+                "Print summary statistics: mean ± std of final episode returns and upright fraction for both conditions"
+            ],
+            "sub_task": "Implement and train SAC for both conditions (A and B) across 5 seeds",
+            "sub_task_agent": "engineer",
+            "code_execution_timeout": 1800
+        },
+        {
+            "bullet_points": [
+                "Load training logs and model weights from Step 1",
+                "Run 20 evaluation episodes per seed per condition; record episode returns and upright fraction (|θ| < 0.1 rad)",
+                "Compute sample efficiency metric: steps to reach 90% of the maximum average episode return from the training curves, for each condition",
+                "Select a representative seed for grid evaluation: the median-performing seed by final episode return for each condition",
+                "Evaluate Q(s, a=0) on a 2D grid of states (θ ∈ [-π, π], θ̇ ∈ [-8, 8], 100×100 grid) for both conditions using the representative seed's model; this serves as a proxy for V(s)",
+                "Compute the analytic Φ(s) on the same grid",
+                "Compute the residual f_θ(s) = Q_B(s,0) - Φ(s) on the grid for Condition B",
+                "Compute MSE between Q_A(s,0) and Φ(s), and between Q_B(s,0) and Φ(s), on the grid as a value function quality metric",
+                "Save all evaluation results, grid arrays, and computed metrics (including MSE values) to disk as numpy/CSV files",
+                "Print all key numerical results: mean ± std returns, upright fraction, sample efficiency steps, and MSE values for both conditions"
+            ],
+            "sub_task": "Evaluate final policies and compute value function quality on a state grid",
+            "sub_task_agent": "engineer"
+        },
+        {
+            "bullet_points": [
+                "Load all saved results from Steps 1 and 2",
+                "Plot 1 (Learning Curves): mean ± std Lyapunov episode return vs. environment steps for both conditions (5 seeds); show raw shaded band (std across seeds) and a smoothed curve (rolling window average); include a horizontal reference line at 90% of the maximum average reward; save as a single figure",
+                "Plot 2 (Critic Loss): mean ± std critic loss vs. training steps for both conditions, with shaded confidence bands across 5 seeds",
+                "Plot 3 (Value Function Heatmaps): a 2×2 grid of subplots showing (a) analytic Φ(s), (b) learned Q_A(s,0) from Condition A, (c) learned Q_B(s,0) from Condition B, (d) learned residual f_θ(s) from Condition B; axes are θ (x-axis) and θ̇ (y-axis); use consistent color scales where appropriate",
+                "Plot 4 (Summary Metrics): a single figure with two side-by-side bar chart subplots — left subplot shows upright stability (mean ± std fraction of steps with |θ| < 0.1 rad) for both conditions; right subplot shows sample efficiency (steps to 90% max reward) for both conditions; include error bars",
+                "Save all plots as high-resolution PNG files (dpi ≥ 300)"
+            ],
+            "sub_task": "Generate all plots for the paper",
+            "sub_task_agent": "engineer"
+        },
+        {
+            "bullet_points": [
+                "Summarize all quantitative results from Steps 1–3, explicitly stating numerical values (mean ± std) for all key metrics for both conditions in the text",
+                "Interpret the learning curves (Plot 1): compare convergence speed and final performance of Condition A vs. Condition B, referencing the smoothed curves and shaded bands",
+                "Discuss the sample efficiency metric (steps to 90% max reward) with exact numerical values for both conditions, and what this implies about the benefit of the Lyapunov structural prior",
+                "Analyze the value function heatmaps (Plot 3): describe how Q_A(s,0), Q_B(s,0), and f_θ(s) compare to the analytic Φ(s), and what the residual reveals about the learned correction; include the MSE values for both conditions",
+                "Discuss upright stability results (Plot 4, left) with exact mean ± std values and their connection to policy quality",
+                "Discuss critic loss convergence (Plot 2) and whether the structured initialization leads to faster or more stable critic training",
+                "Reference all generated plots by their descriptions",
+                "Write in formal academic style suitable for a research paper Results section"
+            ],
+            "sub_task": "Write the full Results section of the paper",
+            "sub_task_agent": "researcher"
+        }
+    ]
+}
