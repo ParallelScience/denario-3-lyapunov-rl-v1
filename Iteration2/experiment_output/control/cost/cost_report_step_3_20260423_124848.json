@@ -1,0 +1,66 @@
+[
+  {
+    "Agent": "control starter",
+    "Cost ($)": 0.00081625,
+    "Prompt Tokens": 3187.0,
+    "Completion Tokens": 13.0,
+    "Total Tokens": 3200.0,
+    "Model": "gemini-3.1-flash-lite-preview"
+  },
+  {
+    "Agent": "controller",
+    "Cost ($)": 0.002305,
+    "Prompt Tokens": 9112.0,
+    "Completion Tokens": 18.0,
+    "Total Tokens": 9130.0,
+    "Model": "gemini-3.1-flash-lite-preview"
+  },
+  {
+    "Agent": "engineer response evaluator",
+    "Cost ($)": 0.00611475,
+    "Prompt Tokens": 6777.0,
+    "Completion Tokens": 2947.0,
+    "Total Tokens": 9724.0,
+    "Model": "gemini-3.1-flash-lite-preview"
+  },
+  {
+    "Agent": "image reviewer",
+    "Cost ($)": 0.0001815,
+    "Prompt Tokens": 2076.0,
+    "Completion Tokens": 86.0,
+    "Total Tokens": 2162.0,
+    "Model": "gemini-3.1-flash-image-preview"
+  },
+  {
+    "Agent": "image review recorder",
+    "Cost ($)": 0.00026725,
+    "Prompt Tokens": 511.0,
+    "Completion Tokens": 93.0,
+    "Total Tokens": 604.0,
+    "Model": "gemini-3.1-flash-lite-preview"
+  },
+  {
+    "Agent": "engineer",
+    "Cost ($)": 0.105159,
+    "Prompt Tokens": 14573.0,
+    "Completion Tokens": 4096.0,
+    "Total Tokens": 18669.0,
+    "Model": "claude-sonnet-4-6"
+  },
+  {
+    "Agent": "executor response evaluator",
+    "Cost ($)": 0.00037625,
+    "Prompt Tokens": 1325.0,
+    "Completion Tokens": 30.0,
+    "Total Tokens": 1355.0,
+    "Model": "gemini-3.1-flash-lite-preview"
+  },
+  {
+    "Agent": "Total",
+    "Cost ($)": 0.11522,
+    "Prompt Tokens": 37561.0,
+    "Completion Tokens": 7283.0,
+    "Total Tokens": 44844.0,
+    "Model": NaN
+  }
+]
