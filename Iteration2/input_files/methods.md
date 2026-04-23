@@ -1,37 +1,38 @@
-1. **Environment and SAC Architecture**:
-   - Utilize `gymnasium.make('Pendulum-v1')` with a custom reward wrapper implementing $R_t = \Phi(s_t) - \Phi(s_{t+1})$.
-   - Implement SAC using a standard PyTorch framework, ensuring double-Q learning (two Q-networks) is applied consistently across all conditions.
-   - For Condition A (Baseline), use standard MLP critics $Q_\theta(s, a)$.
-   - For Condition B (Structured), implement the decomposition $Q(s, a) = \alpha \Phi(s) + f_\theta(s, a)$, where $\alpha$ is a learnable scalar (initialized to 0.1 to prevent initial bias) and $f_\theta(s, a)$ is the residual MLP. Apply this to both online and target Q-networks.
+1. **Environment and Reward Configuration**:
+   - Utilize `gymnasium.make('Pendulum-v1')` with a custom reward wrapper replacing the native reward with:
+     $$R_t = \Phi(s_t) - \Phi(s_{t+1}), \quad \Phi(s) = (1 - \cos\theta) + 0.5\dot\theta^2$$
+   - Recover $\theta = \text{atan2}(\sin\theta, \cos\theta)$ from the state.
 
-2. **Initialization and Learning Rate Scheduling**:
-   - Initialize the final layer weights and biases of the residual network $f_\theta$ to zero so that $Q(s, a) \approx \alpha \Phi(s)$ at the start of training.
-   - Use a separate optimizer for the learnable scalar $\alpha$ with a learning rate 10x smaller than the learning rate for the residual network $f_\theta$ to prevent the prior from destabilizing the critic during early learning.
-   - Constrain $\alpha$ to be positive using a softplus activation.
+2. **PPO Implementation**:
+   - Implement Proximal Policy Optimization (PPO) with a separate actor and critic.
+   - The critic estimates the **state value function V(s)** — not Q(s,a). This is the correct architecture for the $V(s) = \Phi(s) + f_\theta(s)$ decomposition.
+   - Standard PPO hyperparameters: clip ratio $\epsilon=0.2$, GAE ($\lambda=0.95$), $\gamma=0.99$, entropy coefficient $c_2=0.01$, 4 epochs per rollout, rollout length 2048, minibatch size 64.
 
-3. **Soft Regularization (Condition C)**:
-   - Implement a third condition where the Lyapunov prior is applied as a soft constraint: $L_{total} = L_{Bellman} + \lambda \cdot \text{MSE}(V_{critic}(s), \Phi(s))$.
-   - Define $V_{critic}(s) = \mathbb{E}_{a \sim \pi}[Q(s, a)]$ using the current policy to ensure the regularization term is state-dependent and matches the scale of $\Phi(s)$.
+3. **Three Experimental Conditions**:
+   - **Condition A (Baseline)**: Standard PPO critic — 2-layer MLP outputs $V(s)$ directly.
+   - **Condition B (Hard Structured Prior)**: Critic decomposed as $V(s) = \alpha \cdot \Phi(s) + f_\theta(s)$, where $\alpha$ is a **learnable scalar** (Softplus-constrained to be positive, initialized to 1.0). The residual network $f_\theta$ has its final layer initialized to zero. A separate optimizer with 10× lower learning rate trains $\alpha$ to prevent the prior from destabilizing early training.
+   - **Condition C (Soft Regularization)**: Standard PPO critic (same as A), but the critic loss includes a soft Lyapunov regularization term: $\mathcal{L}_{total} = \mathcal{L}_{PPO} + \lambda \| V(s) - \Phi(s) \|^2$, with $\lambda=0.1$.
 
 4. **Training Protocol**:
-   - Train all conditions (A, B, and C) for 100,000 environment steps.
-   - Use 5 random seeds per condition.
-   - Maintain identical hyperparameters (learning rate, batch size, buffer size, entropy coefficient $\alpha_{entropy}$) across all conditions to ensure a fair comparison.
+   - Train all three conditions for 100,000 environment steps across 5 random seeds each.
+   - Use identical actor architecture and all other hyperparameters across conditions.
+   - Log episode returns (Lyapunov reward), upright stability, and critic loss at each update.
 
-5. **Performance Metrics and Thresholds**:
-   - Calculate the maximum possible return per episode as $\Phi(s_{initial})$ based on the Pendulum's starting state distribution.
-   - Set the absolute performance threshold for sample efficiency at 80% of the average $\Phi(s_{initial})$.
-   - Record the number of environment steps required to consistently cross this threshold.
+5. **Absolute Performance Threshold (Sample Efficiency)**:
+   - Replace the "90% of own max" metric with an **absolute return threshold** of −0.5.
+   - Record steps to first consistently exceed this threshold (over a rolling 5-episode window).
+   - This avoids penalizing conditions with higher performance ceilings.
 
-6. **Gradient and Sensitivity Analysis**:
-   - Monitor the evolution of the learnable scalar $\alpha$ in Condition B throughout training. Log its value at every gradient update to determine if the model tunes the prior or if it collapses to zero.
-   - During the first 10,000 steps, log the norm of the gradients for $f_\theta$ and compare them against the gradients of the fixed $\Phi(s)$ component to assess the learning dynamics.
+6. **Gradient Monitoring (First 10,000 Steps)**:
+   - For Condition B: log the norm of gradients for $f_\theta$ and the magnitude of the $\alpha \cdot \Phi(s)$ contribution at each update.
+   - Log the value of $\alpha$ throughout training to track whether the prior is retained, amplified, or attenuated.
 
-7. **Value Function and Policy Evaluation**:
-   - Evaluate the learned $Q(s, a)$ on a 2D grid of states $(\theta, \dot\theta)$ by fixing $a=0$.
-   - Calculate upright stability as the fraction of evaluation steps where $|\theta| < 0.1$ rad.
-   - Compare final policy quality by rendering the agent and calculating the average return over 100 evaluation episodes.
+7. **Value Function Analysis**:
+   - Evaluate $V(s)$ for all three conditions on a 100×100 grid of states ($\theta \in [-\pi, \pi]$, $\dot\theta \in [-8, 8]$).
+   - Plot heatmaps of: (a) analytic $\Phi(s)$, (b) $V_A(s)$, (c) $V_B(s) = \alpha\Phi(s) + f_\theta(s)$, (d) residual $f_\theta(s)$, (e) learned $\alpha$ scalar over training.
+   - Compute MSE between each learned $V(s)$ and $\Phi(s)$ on the grid.
 
 8. **Statistical Comparison**:
-   - Perform a comparative analysis of the three conditions using mean and 95% confidence intervals across the 5 seeds.
-   - Use the collected metrics to determine if the learnable scalar (Condition B) or soft regularization (Condition C) provides superior stability and sample efficiency compared to the baseline.
+   - Compare all three conditions on: upright stability (fraction of steps with $|\theta| < 0.1$ rad), steps to absolute threshold, final episode return, and critic convergence.
+   - Report mean ± 95% CI across 5 seeds for each metric.
+   - Assess whether adaptive $\alpha$ (Condition B) or soft regularization (Condition C) is more effective at resolving the bimodal failure mode observed in Iter 1.
