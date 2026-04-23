@@ -3,5 +3,10 @@
     "key": "image0",
     "name": "step_3_learning_curves_1_1776948522.png",
     "caption": "Smoothed episode return versus environment steps for a standard PPO critic (Condition A) and a critic structured with a Lyapunov prior (Condition B). Curves show the mean \u00b1 one standard deviation over five random seeds, with individual seed trajectories overlaid. Both conditions exhibit nearly identical learning trajectories, improving initially before plateauing at a similar negative return value. This suggests that the structural prior in the value function did not lead to a discernible improvement in policy learning speed or final performance within the 100,000-step training horizon."
+  },
+  "image1": {
+    "key": "image1",
+    "name": "value_function_heatmaps.png",
+    "caption": "Heatmaps of the value functions over the pendulum state space, comparing (a) the analytic Lyapunov function $\\Phi(s)$, (b) the value function $V\\_A(s)$ learned by a standard PPO critic, and (c) the value function $V\\_B(s)$ from a structured critic decomposed as $V(s) = \\Phi(s) + f\\_\\theta(s)$. Panel (d) shows the learned residual component $f\\_\\theta(s)$. The structured value function $V\\_B(s)$ provides a substantially closer approximation to the analytic function $\\Phi(s)$ than the directly learned $V\\_A(s)$, achieving an 86\\% reduction in mean squared error. The residual function $f\\_\\theta(s)$ is non-trivial, indicating that the network learned meaningful, policy-dependent corrections to the Lyapunov prior with an average magnitude of approximately 26\\% relative to $\\Phi(s)$."
   }
 }

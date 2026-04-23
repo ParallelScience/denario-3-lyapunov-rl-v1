@@ -18,6 +18,13 @@
     \label{fig:image0}
 \end{figure}
 
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.5\textwidth]{../input_files/plots/value_function_heatmaps.png}
+    \caption{Heatmaps of the value functions over the pendulum state space, comparing (a) the analytic Lyapunov function $\Phi(s)$, (b) the value function $V\_A(s)$ learned by a standard PPO critic, and (c) the value function $V\_B(s)$ from a structured critic decomposed as $V(s) = \Phi(s) + f\_\theta(s)$. Panel (d) shows the learned residual component $f\_\theta(s)$. The structured value function $V\_B(s)$ provides a substantially closer approximation to the analytic function $\Phi(s)$ than the directly learned $V\_A(s)$, achieving an 86\% reduction in mean squared error. The residual function $f\_\theta(s)$ is non-trivial, indicating that the network learned meaningful, policy-dependent corrections to the Lyapunov prior with an average magnitude of approximately 26\% relative to $\Phi(s)$.}
+    \label{fig:image1}
+\end{figure}
+
 
 
 \end{document}
