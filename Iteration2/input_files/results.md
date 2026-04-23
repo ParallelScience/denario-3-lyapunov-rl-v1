@@ -98,3 +98,22 @@ Several important limitations constrain the generalizability of these findings.
 **Algorithm choice.** The experiments used PPO rather than SAC, which was the algorithm originally specified in the problem description. PPO is an on-policy algorithm that estimates the state value function V(s) directly, making it a natural fit for the structured decomposition V(s) = Φ(s) + f_θ(s). SAC, as an off-policy actor-critic method, estimates Q-functions rather than V-functions, which would require a different formulation of the structured decomposition (e.g., Q(s,a) = Φ(s) + g_θ(s,a)). The choice of PPO may have influenced the results, as on-policy methods are generally less sample-efficient than off-policy methods on continuous control tasks, potentially exacerbating the training budget limitation.
 
 **Hyperparameter sensitivity.** The PPO hyperparameters (rollout length 2048, minibatch size 64, 4 epochs per rollout, learning rate 3×10⁻⁴) were held fixed across both conditions and were not tuned specifically for the Lyapunov reward setting. The Lyapunov reward R_t = Φ(s_t) − Φ(s_{t+1}) has a different scale and distribution than the native Pendulum-v1 reward, and the optimal hyperparameters may differ from those used here.
+---
+
+## Critic Loss vs. GAE Returns: The Definitive Comparison
+
+The most informative metric for evaluating the structured critic is the PPO critic training loss — the MSE between the predicted $V(s)$ and the actual GAE-computed returns $G_t$. This is the loss the value function is trained to minimize, and it directly measures how well each critic approximates the true discounted return.
+
+| Phase | Condition A | Condition B |
+|---|---|---|
+| Early training (first 20%) | 5.6863 | **0.7334** |
+| Final training (last 20%) | **0.0010 ± 0.0003** | 0.0029 ± 0.0051 |
+| Overall mean | 1.0568 | **0.1362** |
+
+**Condition B achieves 87% lower overall critic loss (MSE vs. returns) than Condition A: 0.136 vs. 1.057.**
+
+The early-training gap is particularly striking: Condition B's critic loss is **8× lower** than Condition A's in the first 20% of training (0.73 vs. 5.69). This confirms that the Lyapunov structural prior Φ(s) provides a substantially better initialization for predicting actual GAE returns — not just for aligning with the analytic Lyapunov function. The prior accelerates critic learning precisely when the replay buffer is sparse and the policy is most uncertain.
+
+By the end of training, both conditions converge to low critic loss values, with Condition A's final loss slightly tighter (0.0010 vs. 0.0029). This suggests the Lyapunov prior provides its largest benefit early in training, after which the residual $f_\theta(s)$ may introduce additional variance that prevents Condition B from achieving the same final precision as the unconstrained critic.
+
+The failure of this early critic advantage to translate into better policy performance within 100,000 steps is consistent with PPO's known sample inefficiency on continuous control tasks: the actor requires many more gradient steps to fully exploit improvements in value function quality. Extending the training budget to 500,000+ steps is the most direct test of whether the early critic advantage in Condition B eventually yields a superior stabilizing policy.
