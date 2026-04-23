@@ -1,0 +1,224 @@
+
+###### PROMPT BEGINS ########
+Human: You are provided with:
+- a description of the data
+- an idea
+- research plan to carry out the idea.
+
+Your task is to provide suggestions on how to improve the plan.
+Take into account and potential feedback (if any).
+If the plan is already good enough, do not give suggestions to improve it. If this is not first iteration, you will also be provided with the previous research plan along with some feedback on it. If this is the case, take into account the feedback provided when designing the new research plan. It is good to have a detailed plan, but not to have an overly complicated plan. If you dont have suggestions, just say that you dont have further suggestions. The idea should remain the same. No need to add code to the research plan, as another agent will write code given the research plan.
+
+Data description:
+# Lyapunov-Based Reward Shaping for Reinforcement Learning
+
+## Overview
+
+This project investigates Lyapunov-based reward shaping in reinforcement learning, where the reward at each timestep is defined as the decrease in an analytically given Lyapunov function:
+
+    R_t = Φ(s_t) - Φ(s_{t+1})
+
+The core research question is whether structuring the value function as V(s) = Φ(s) + f(s) — where only the residual f(s) is learned — improves sample efficiency, stability, and policy quality compared to learning V(s) directly from scratch.
+
+## Environment
+
+**Gymnasium Pendulum-v1** — a standard continuous-control benchmark.
+
+- **State space:** s = (cos θ, sin θ, θ̇) ∈ [-1,1] × [-1,1] × [-8,8]
+- **Action space:** torque u ∈ [-2, 2] (continuous)
+- **Goal:** stabilize the pendulum at the upright position (θ = 0)
+- **Episode length:** 200 steps
+
+The native Gymnasium reward is replaced entirely by the Lyapunov-based reward defined below.
+
+## Lyapunov Function
+
+The Lyapunov function is the **mechanical energy of the pendulum** relative to the upright equilibrium:
+
+    Φ(s) = (1 - cos θ) + 0.5 * θ̇²
+
+Where:
+- θ = angle from upright (recovered from state as θ = atan2(sin θ, cos θ))
+- θ̇ = angular velocity (third component of state)
+- Φ(s) = 0 at the upright equilibrium (θ=0, θ̇=0)
+- Φ(s) > 0 everywhere else (positive definite)
+
+This is a valid Lyapunov candidate for the uncontrolled pendulum dynamics. The reward R_t = Φ(s_t) - Φ(s_{t+1}) is positive when the agent drives the system toward the equilibrium.
+
+## Research Conditions
+
+Two experimental conditions are compared using Soft Actor-Critic (SAC):
+
+### Condition A: Direct Value Learning
+- Standard SAC with the Lyapunov reward R_t = Φ(s_t) - Φ(s_{t+1})
+- Value function V(s) learned entirely from data (standard neural network critic)
+- Baseline: represents the standard approach to reward shaping
+
+### Condition B: Structured Value Function
+- Same SAC algorithm and Lyapunov reward
+- Value function decomposed as: V(s) = Φ(s) + f_θ(s)
+- Only the residual f_θ(s) is learned by the neural network
+- Critic network outputs f_θ(s); total value = Φ(s) + f_θ(s)
+- Hypothesis: initializing V with the physically meaningful Φ should improve sample efficiency and stability
+
+## Implementation Notes
+
+- Install gymnasium with: `pip install gymnasium[classic_control]`
+- SAC implementation: use stable-baselines3 or a custom PyTorch SAC
+- Custom reward wrapper: override the environment reward with R_t = Φ(s_t) - Φ(s_{t+1})
+- For Condition B, modify the critic network to output f_θ(s) and add Φ(s) analytically
+- Training: 100,000 environment steps per run, 5 random seeds each condition
+- Evaluation: average return (using Lyapunov reward), upright time, and convergence speed
+- Hardware: GPU available (NVIDIA RTX PRO 6000, use device='cuda')
+
+## Evaluation Metrics
+
+1. **Learning curves**: cumulative Lyapunov reward vs. environment steps (5 seeds, mean ± std)
+2. **Sample efficiency**: steps to reach 90% of maximum average reward
+3. **Upright stability**: fraction of time steps in upright region (|θ| < 0.1 rad) after training
+4. **Value function quality**: compare learned V(s) vs. true Φ(s) on a grid of states
+5. **Policy quality**: render/evaluate final policy qualitatively
+
+## File Paths
+
+No pre-existing data files. All data is generated online via environment interaction.
+The environment is instantiated in code as: `gymnasium.make('Pendulum-v1')`
+
+
+Idea:
+**Title: Lyapunov-Structured Value Functions for Reinforcement Learning on the Pendulum**
+
+This research investigates whether structuring the critic as $V(s) = \Phi(s) + f_\theta(s)$ — where $\Phi(s)$ is an analytically given Lyapunov function and only the residual $f_\theta(s)$ is learned — improves sample efficiency, stability, and policy quality compared to learning $V(s)$ directly from data.
+
+The environment is Gymnasium Pendulum-v1, a standard continuous-control benchmark where the goal is to stabilize the pendulum at the upright position ($\theta = 0$). The native environment reward is replaced entirely by the Lyapunov-based reward:
+
+$$R_t = \Phi(s_t) - \Phi(s_{t+1})$$
+
+where $\Phi(s)$ is a Lyapunov function for the pendulum system. Specifically, $\Phi$ is the mechanical energy relative to the upright equilibrium:
+
+$$\Phi(s) = (1 - \cos\theta) + \frac{1}{2}\dot\theta^2$$
+
+$\Phi$ satisfies the Lyapunov conditions: it is positive definite ($\Phi(s) > 0$ for all $s \neq s^*$, $\Phi(s^*) = 0$ at the upright equilibrium $s^* = (\theta=0, \dot\theta=0)$), and radially unbounded. The reward $R_t = \Phi(s_t) - \Phi(s_{t+1})$ is therefore positive whenever the agent drives the system toward the equilibrium (decreasing $\Phi$), and zero at the goal. By design, a policy that consistently achieves positive reward is one that drives $\Phi$ to zero — i.e., one that stabilizes the system in the Lyapunov sense.
+
+Two experimental conditions are compared using Soft Actor-Critic (SAC):
+
+**Condition A — Direct Value Learning:** Standard SAC where the critic learns $V(s)$ entirely from data. This is the baseline.
+
+**Condition B — Structured Value Function:** The critic is decomposed as $V(s) = \Phi(s) + f_\theta(s)$. The network outputs only the residual $f_\theta(s)$; the analytic $\Phi(s)$ is added directly. The hypothesis is that initializing the value estimate with the physically meaningful Lyapunov function reduces the residual's search space, leading to faster convergence and a more stable critic.
+
+Both conditions are trained for 100,000 environment steps across 5 random seeds. Performance is evaluated by: (1) learning curves of the Lyapunov reward over time, (2) sample efficiency (steps to reach 90% of maximum reward), (3) upright stabilization time after training, and (4) a comparison of the learned value function against the analytic $\Phi(s)$ on a grid of states to assess how much structure the residual captures.
+
+
+Research plan:
+1. **Environment and SAC Architecture**:
+   - Utilize `gymnasium.make('Pendulum-v1')` with the custom reward wrapper $R_t = \Phi(s_t) - \Phi(s_{t+1})$.
+   - Implement Soft Actor-Critic (SAC) using a standard PyTorch framework. Ensure the critic learns the action-value function $Q(s, a)$.
+   - For Condition A (Baseline), use a standard MLP critic $Q_\theta(s, a)$.
+   - For Condition B (Structured), implement the decomposition $Q(s, a) = \alpha \Phi(s) + f_\theta(s, a)$, where $\alpha$ is a learnable scalar parameter initialized to 1.0, and $f_\theta$ is the neural network residual.
+
+2. **Initialization and Scaling**:
+   - Initialize the final layer weights and biases of the residual network $f_\theta$ to zero to ensure that at the start of training, $Q(s, a) \approx \Phi(s)$.
+   - Ensure the learnable scalar $\alpha$ is constrained to be positive (e.g., via softplus or absolute value) to maintain the physical intuition of the Lyapunov prior.
+
+3. **Soft Regularization Alternative (Condition C)**:
+   - Implement a third condition where the Lyapunov prior is applied as a soft constraint rather than a hard architectural one.
+   - Define the critic loss as $L = L_{Bellman} + \lambda \cdot \text{MSE}(Q(s, a), \Phi(s))$, where $\lambda$ is a hyperparameter controlling the strength of the prior. This allows the model to deviate from $\Phi(s)$ if the Bellman error suggests a better fit.
+
+4. **Training Protocol**:
+   - Train all conditions (A, B, and C) for 100,000 environment steps.
+   - Use 5 random seeds per condition to capture variance.
+   - Maintain identical hyperparameters (learning rate, batch size, buffer size, entropy coefficient) across all conditions to ensure a fair comparison.
+
+5. **Absolute Performance Metrics**:
+   - Replace the "90% of max" metric with a fixed absolute return threshold (e.g., -0.5 cumulative reward per episode) to measure sample efficiency.
+   - Record the number of environment steps required to cross this threshold consistently.
+
+6. **Gradient and Sensitivity Analysis**:
+   - During the first 10,000 steps, log the norm of the gradients for the residual network $f_\theta$ and compare them against the gradients of the fixed $\Phi(s)$ component.
+   - Monitor the evolution of the learnable scalar $\alpha$ in Condition B to determine if the model effectively "tunes" the influence of the physical prior.
+
+7. **Value Function and Policy Evaluation**:
+   - Evaluate the learned $Q(s, a)$ on a 2D grid of states ($\theta, \dot\theta$) with a fixed action $a=0$.
+   - Calculate the upright stability as the fraction of evaluation steps where $|\theta| < 0.1$ rad.
+   - Compare the final policy quality by rendering the agent and calculating the average return over 100 evaluation episodes.
+
+8. **Statistical Comparison**:
+   - Perform a comparative analysis of the three conditions using mean and 95% confidence intervals across the 5 seeds.
+   - Use the collected metrics to determine if the learnable scalar (Condition B) or the soft regularization (Condition C) successfully mitigates the bimodal failure observed in previous iterations.
+
+Previous research plan:
+1. **Environment and Reward Configuration**:
+   - Utilize `Pendulum-v1`. Implement a reward wrapper that replaces the native reward with the Lyapunov-based reward:
+     $$R_t = \Phi(s_t) - \Phi(s_{t+1}), \quad \Phi(s) = (1 - \cos\theta) + 0.5\dot\theta^2$$
+   - Recover $\theta$ using `atan2(sin θ, cos θ)` from the state representation.
+
+2. **PPO Implementation**:
+   - Implement Proximal Policy Optimization (PPO) with a shared or separate actor-critic architecture.
+   - The critic explicitly estimates the state value function $V(s)$ — not $Q(s,a)$ — making it a natural fit for the structured decomposition below.
+   - Use standard PPO hyperparameters: clip ratio $\epsilon=0.2$, entropy bonus, GAE ($\lambda=0.95$), $\gamma=0.99$.
+
+3. **Condition A — Direct Value Learning (Baseline)**:
+   - Standard PPO critic: a 2-layer MLP that outputs $V(s)$ directly.
+   - Trained end-to-end on the Lyapunov reward.
+
+4. **Condition B — Structured Value Function**:
+   - The PPO critic is decomposed as $V(s) = \Phi(s) + f_\theta(s)$.
+   - The network outputs only the residual $f_\theta(s)$; the analytic $\Phi(s)$ is added to the output.
+   - **Initialization**: set the final layer weights and biases of $f_\theta$ to zero, so $V(s) \approx \Phi(s)$ at the start of training.
+   - The policy (actor) is identical in both conditions; only the critic architecture differs.
+
+5. **Training Protocol**:
+   - Train both conditions for 100,000 environment steps across 5 random seeds each.
+   - Use identical hyperparameters for both conditions.
+   - Log episode returns (Lyapunov reward), upright stability, and critic loss at each update.
+
+6. **Value Function Analysis**:
+   - Evaluate the learned $V(s)$ for both conditions on a 2D grid of states ($\theta \in [-\pi, \pi]$, $\dot\theta \in [-8, 8]$).
+   - Plot heatmaps of: (a) analytic $\Phi(s)$, (b) learned $V_A(s)$, (c) learned $V_B(s)$, (d) learned residual $f_\theta(s)$.
+   - Compare the residual $f_\theta(s)$ to the theoretical expectation $V^*(s) - \Phi(s)$ to assess whether the network learns the "correction" beyond the Lyapunov prior.
+
+7. **Performance Metrics**:
+   - Learning curves: mean ± std Lyapunov reward over training steps (5 seeds).
+   - Sample efficiency: steps to reach 90% of maximum average reward.
+   - Upright stability: fraction of evaluation steps with $|\theta| < 0.1$ rad.
+   - Critic convergence: MSE of $V(s)$ against a high-fidelity $V^*$ baseline (trained for 500k steps) over training time.
+
+8. **Statistical Comparison**:
+   - Compare Condition A vs. Condition B on all metrics using confidence intervals across 5 seeds.
+   - Assess whether the Lyapunov structural prior accelerates critic convergence even when the policy fails to reach the upright position.
+
+
+Feedback on previous research plan:
+The current results reveal a critical trade-off: while the Lyapunov prior (Condition B) improves the *quality* of the final policy (upright stability), it significantly degrades the *reliability* of the learning process. The bimodal performance and high variance in Condition B suggest that the fixed $\Phi(s)$ component acts as a "hard" prior that can trap the agent in suboptimal regions of the value landscape if the initial exploration does not align with the energy-based gradient.
+
+**Critique of Current Methodology:**
+1. **The "90% Threshold" Trap:** Your sample efficiency metric is flawed. By defining the threshold relative to each seed's own maximum, you are penalizing Condition B for having a higher ceiling. A better metric would be the absolute return threshold (e.g., "steps to reach -0.5 return"), which would likely show that Condition B reaches functional stability faster than Condition A.
+2. **Optimization Conflict:** The "bimodal" failure in Condition B likely stems from the fact that $\Phi(s)$ is a Lyapunov function for the *uncontrolled* system. In SAC, the entropy term and the discount factor $\gamma$ fundamentally change the optimal value function $V^*(s)$ compared to the energy-based $\Phi(s)$. Forcing the critic to learn a residual $f_\theta$ that compensates for both the dynamics *and* the entropy regularization may be creating a non-stationary optimization target.
+3. **Initialization Bias:** Initializing the final layer to zero is a good start, but it assumes the scale of $\Phi(s)$ matches the scale of the rewards. If the magnitude of $\Phi(s)$ is significantly larger than the expected discounted returns, the gradients for $f_\theta$ may be suppressed or dominated by the fixed component.
+
+**Actionable Recommendations for Future Iterations:**
+1. **Scale the Prior:** Introduce a learnable scalar weight $\alpha$ for the Lyapunov component: $V(s) = \alpha \Phi(s) + f_\theta(s)$. This allows the network to "down-weight" the physical prior if it conflicts with the learned value landscape, potentially reducing the bimodal failure rate.
+2. **Shift to Absolute Performance Metrics:** Abandon the "90% of max" metric. Use a fixed, meaningful return threshold (e.g., -0.5 or -1.0) to compare sample efficiency. This will clarify whether Condition B is actually faster at reaching a "good enough" policy.
+3. **Analyze the Residual Gradient:** Instead of just plotting the residual, calculate the gradient magnitude of $f_\theta$ versus the gradient magnitude of the fixed $\Phi(s)$ component during the first 10,000 steps. This will confirm if the "bimodal" failure is caused by the prior overwhelming the learning signal.
+4. **Simplify the Architecture:** You are currently using SAC (which learns $Q(s,a)$) but your plan mentions PPO (which learns $V(s)$). Ensure you stick to one. If using SAC, the decomposition $Q(s,a) = \Phi(s) + f_\theta(s,a)$ is mathematically sound, but ensure the residual $f_\theta$ is not forced to account for the action-dependence of the Q-function in a way that ignores the state-only nature of $\Phi(s)$.
+5. **Test "Soft" Initialization:** Instead of a fixed $\Phi(s)$, try using $\Phi(s)$ as a *regularizer* in the loss function (e.g., $Loss = Loss_{Bellman} + \lambda ||V(s) - \Phi(s)||^2$) rather than a hard architectural constraint. This allows the model to deviate from the prior if the data strongly suggests otherwise, which should stabilize the variance across seeds.
+
+
+Respond in this format:
+
+\\begin{SUGGESTIONS}
+<SUGGESTIONS>
+\\end{SUGGESTIONS}
+
+In <SUGGESTIONS> put the suggestions to improve the plan.
+
+###### PROMPT ENDS ########
+
+\begin{SUGGESTIONS}
+1. **Clarify the Q-function Decomposition**: In Condition B, you define $Q(s, a) = \alpha \Phi(s) + f_\theta(s, a)$. Note that $\Phi(s)$ is state-dependent, while $Q$ is state-action dependent. Ensure your implementation of $f_\theta(s, a)$ is expressive enough to capture the action-dependent dynamics, as the residual must account for the difference between the energy-based state value and the true action-value.
+2. **Refine the Soft Regularization (Condition C)**: The current loss $L = L_{Bellman} + \lambda \cdot \text{MSE}(Q(s, a), \Phi(s))$ is problematic because $Q(s, a)$ and $\Phi(s)$ have different units/scales (one is an action-value, the other is an energy-based state-value). Instead, use the regularization to penalize the *difference* between the critic's state-value estimate and the Lyapunov function: $L = L_{Bellman} + \lambda \cdot \text{MSE}(V_{critic}(s), \Phi(s))$, where $V_{critic}(s) = \mathbb{E}_{a \sim \pi}[Q(s, a)]$. This aligns the physical prior with the value function specifically.
+3. **Hyperparameter Sensitivity**: Given the "bimodal" failure, add a small experiment or sensitivity check for the learning rate of the residual network $f_\theta$ versus the learnable scalar $\alpha$. If $\alpha$ updates too quickly, it may destabilize the critic early on. Consider using a smaller learning rate for $\alpha$ than for the neural network weights.
+4. **Consistency Check**: Ensure that the "Absolute Performance Metric" (Condition 5) uses a threshold that is actually reachable by the environment. Since the Lyapunov reward is $R_t = \Phi(s_t) - \Phi(s_{t+1})$, the maximum possible return per episode is $\Phi(s_{initial}) - \Phi(s_{goal}) = \Phi(s_{initial})$. Calculate this value for the Pendulum's starting state distribution to set a realistic "success" threshold.
+5. **Evaluation of $\alpha$**: In Condition B, explicitly plot the trajectory of the learnable scalar $\alpha$ over the 100,000 steps. This will provide direct evidence of whether the model is successfully "tuning" the physical prior or if it is collapsing to a specific value that indicates a failure to integrate the prior correctly.
+\end{SUGGESTIONS}
+
