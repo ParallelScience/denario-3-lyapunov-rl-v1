@@ -1,0 +1,61 @@
+{
+    "sub_tasks": [
+        {
+            "bullet_points": [
+                "Implement a custom Gymnasium wrapper for Pendulum-v1 that replaces the native reward with the Lyapunov-based reward R_t = Φ(s_t) - Φ(s_{t+1}), where Φ(s) = (1 - cos θ) + 0.5 * θ̇²; recover θ = atan2(sin θ, cos θ) from the 3D state",
+                "Implement PPO from scratch in PyTorch with a shared rollout buffer; the rollout buffer must store raw states (cos θ, sin θ, θ̇), rewards, values, log-probs, dones, and advantages; use GAE (λ=0.95), γ=0.99, clip ratio ε=0.2, entropy coefficient 0.01, 4 epochs per rollout, rollout length 2048, minibatch size 64",
+                "Actor network: identical for both conditions — 2-layer MLP with 64 hidden units and tanh activations, outputting mean and log-std of a Gaussian policy over the continuous action space",
+                "Condition A critic: 2-layer MLP (64 hidden units, tanh) that outputs V(s) directly from the 3D state",
+                "Condition B critic: 2-layer MLP (64 hidden units, tanh) that outputs only the residual f_θ(s); total value is V(s) = Φ(s) + f_θ(s), where Φ(s) is computed analytically from the raw state during both rollout collection and critic updates",
+                "Train both conditions for 100,000 environment steps across 5 random seeds each on CUDA",
+                "Log episode returns (Lyapunov reward), upright stability (fraction of steps with |θ| < 0.1 rad per episode), and critic loss at each PPO update",
+                "Save all training metrics (learning curves, upright fractions, critic losses per update step) to disk as npz files",
+                "Save model weights for all 5 seeds of both conditions to disk, one file per seed per condition (e.g., condition_A_seed_0.pt, condition_B_seed_0.pt, etc.)",
+                "Print key summary statistics: mean ± std final episode return and upright fraction for both conditions"
+            ],
+            "sub_task": "Implement and train both PPO conditions (A: direct value learning, B: structured Lyapunov value function) across 5 random seeds",
+            "sub_task_agent": "engineer"
+        },
+        {
+            "bullet_points": [
+                "Load saved training metrics and model weights from Step 1",
+                "Evaluate the final policy for each seed and condition over 10 evaluation episodes using the Lyapunov reward wrapper; record episode returns and upright fraction (|θ| < 0.1 rad)",
+                "Compute sample efficiency per seed: apply a rolling average (window of ~10 episodes) to smooth the learning curve, then find the first environment step at which the smoothed return reaches 90% of the maximum smoothed return for that seed; print per-seed and mean ± std sample efficiency for both conditions",
+                "Construct a 100×100 grid of states spanning θ ∈ [-π, π] and θ̇ ∈ [-8, 8]; represent each grid point as the 3D state (cos θ, sin θ, θ̇) to match the network input format; compute the analytic Φ(s) on this grid from the same 3D representation",
+                "For each condition, evaluate the learned value function V(s) on the grid using the final model weights (use seed 0 as the representative model); for Condition B, add Φ(s) analytically to the network output to obtain V_B(s), and also save the raw residual f_θ(s) separately",
+                "Compute MSE between V_A(s) and Φ(s), and between V_B(s) and Φ(s), on the grid; also compute the magnitude of f_θ(s) relative to Φ(s) to assess whether the residual is small",
+                "Save all evaluation results (sample efficiency arrays, upright fractions, value function grids for Φ, V_A, V_B, f_θ, MSE values) to disk as npz files",
+                "Print all key numerical results clearly"
+            ],
+            "sub_task": "Evaluate trained policies and analyze value function quality on a state grid",
+            "sub_task_agent": "engineer"
+        },
+        {
+            "bullet_points": [
+                "Load all saved metrics and evaluation results from Steps 1 and 2",
+                "Plot 1 (Learning Curves with per-seed variability): mean ± std shaded bands for Condition A and B over environment steps; overlay individual per-seed learning curves as thin semi-transparent lines behind the bands to show inter-seed variability",
+                "Plot 2 (Value Function Heatmaps): 1×4 or 2×2 grid of heatmaps with axes θ (x-axis) and θ̇ (y-axis) showing: (a) analytic Φ(s), (b) learned V_A(s), (c) learned V_B(s), (d) residual f_θ(s); panels (a)–(c) share a common colorbar scale to allow direct visual comparison; panel (d) uses a diverging colormap (e.g., RdBu) centered at zero to highlight positive and negative deviations of the residual",
+                "Plot 3 (Summary Bar Chart): side-by-side bar charts with error bars (std across seeds) comparing Condition A vs. B on: (a) mean final episode return, (b) sample efficiency (steps to 90% max reward), (c) upright stability fraction; include an additional panel showing per-seed learning curves as thin lines for both conditions",
+                "Plot 4 (Critic Loss): mean ± std critic loss over training update steps for both conditions with shaded bands",
+                "Save all plots as high-resolution PNG files (dpi ≥ 300) and print their file paths"
+            ],
+            "sub_task": "Generate all plots for the paper",
+            "sub_task_agent": "engineer"
+        },
+        {
+            "bullet_points": [
+                "Summarize all quantitative results from Steps 1–3: learning curves, sample efficiency, upright stability, value function MSE, residual magnitude, and critic loss",
+                "Interpret the learning curves: compare convergence speed and final performance between Condition A (direct) and Condition B (structured); comment on inter-seed variability visible in the per-seed overlay",
+                "Discuss sample efficiency: report mean ± std steps to 90% of maximum reward for both conditions and interpret what this implies about the benefit of the Lyapunov structural prior",
+                "Analyze upright stability: report the fraction of time steps in the upright region (|θ| < 0.1 rad) for both conditions and discuss implications for policy quality",
+                "Interpret the value function heatmaps: describe how closely each learned V(s) matches the analytic Φ(s), report MSE values, and explicitly discuss whether the residual f_θ(s) is small relative to Φ(s) — i.e., whether the structured initialization was actually helpful or whether the network learned to ignore the prior",
+                "Discuss critic loss dynamics: whether the structured critic (Condition B) converges faster or to a lower loss than Condition A",
+                "Synthesize findings into a coherent narrative about whether the Lyapunov structural prior improves RL performance on the pendulum task",
+                "Note limitations: the relatively short training horizon (100,000 steps), the single environment (Pendulum-v1), and the use of PPO rather than SAC (the algorithm originally specified in the problem description); discuss how these choices may affect generalizability",
+                "Reference all generated plots by their descriptions"
+            ],
+            "sub_task": "Write the full Results section of the paper",
+            "sub_task_agent": "researcher"
+        }
+    ]
+}
