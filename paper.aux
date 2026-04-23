@@ -11,8 +11,20 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Training and evaluation}{4}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {3}Results}{4}{}\protected@file@percent }
 \newlabel{sec:results}{{3}{4}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}Conclusions}{4}{}\protected@file@percent }
-\newlabel{sec:conclusions}{{4}{4}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Learning Curves}{4}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Learning curves (mean $\pm $ std, 5 seeds) for Condition A (standard PPO critic) and Condition B (Lyapunov-structured critic $V(s)=\Phi (s)+f_\theta (s)$). Both conditions converge to similar episode returns within 100,000 steps.}}{5}{}\protected@file@percent }
+\newlabel{fig:learning_curves}{{1}{5}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Critic Loss: MSE vs.\nobreakspace  {}GAE Returns}{5}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Critic loss (MSE vs.\nobreakspace  {}GAE returns) at different training phases. Condition B achieves 87\% lower overall loss and an 8$\times $ reduction in early training.}}{5}{}\protected@file@percent }
+\newlabel{tab:critic_loss}{{1}{5}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Value Function Analysis}{5}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Value function heatmaps over the $(\theta , \dot  \theta )$ state space: (a) analytic $\Phi (s)$, (b) learned $V_A(s)$ (Condition A), (c) learned $V_B(s)$ (Condition B), (d) residual $f_\theta (s)$. Condition B is structurally much closer to $\Phi (s)$ ($\text  {MSE} = 10.07$ vs.\nobreakspace  {}$71.98$).}}{6}{}\protected@file@percent }
+\newlabel{fig:heatmaps}{{2}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}Upright Stability and Summary}{6}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Summary of performance metrics across 5 seeds (mean $\pm $ std).}}{6}{}\protected@file@percent }
+\newlabel{tab:summary}{{2}{6}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Conclusions}{6}{}\protected@file@percent }
+\newlabel{sec:conclusions}{{4}{6}}
 \bibdata{bibliography}
 \bibstyle{unsrt}
-\gdef \@abspage@last{5}
+\gdef \@abspage@last{7}
