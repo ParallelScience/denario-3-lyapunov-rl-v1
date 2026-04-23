@@ -14,7 +14,7 @@
 4. **Condition B — Structured Value Function**:
    - The PPO critic is decomposed as $V(s) = \Phi(s) + f_\theta(s)$.
    - The network outputs only the residual $f_\theta(s)$; the analytic $\Phi(s)$ is added to the output.
-   - **Initialization**: set the final layer weights and biases of $f_\theta$ to zero, so $V(s) \approx \Phi(s)$ at the start of training.
+   - The residual network $f_\theta$ uses standard random initialization.
    - The actor is identical in both conditions; only the critic architecture differs.
 
 5. **Training Protocol**:
