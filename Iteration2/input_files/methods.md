@@ -5,34 +5,33 @@
 
 2. **PPO Implementation**:
    - Implement Proximal Policy Optimization (PPO) with a separate actor and critic.
-   - The critic estimates the **state value function V(s)** — not Q(s,a). This is the correct architecture for the $V(s) = \Phi(s) + f_\theta(s)$ decomposition.
+   - The critic estimates the **state value function V(s)** directly — this is the key architectural difference from Iter 1, which incorrectly used SAC (a Q-function method).
    - Standard PPO hyperparameters: clip ratio $\epsilon=0.2$, GAE ($\lambda=0.95$), $\gamma=0.99$, entropy coefficient $c_2=0.01$, 4 epochs per rollout, rollout length 2048, minibatch size 64.
 
-3. **Three Experimental Conditions**:
-   - **Condition A (Baseline)**: Standard PPO critic — 2-layer MLP outputs $V(s)$ directly.
-   - **Condition B (Hard Structured Prior)**: Critic decomposed as $V(s) = \alpha \cdot \Phi(s) + f_\theta(s)$, where $\alpha$ is a **learnable scalar** (Softplus-constrained to be positive, initialized to 1.0). The residual network $f_\theta$ has its final layer initialized to zero. A separate optimizer with 10× lower learning rate trains $\alpha$ to prevent the prior from destabilizing early training.
-   - **Condition C (Soft Regularization)**: Standard PPO critic (same as A), but the critic loss includes a soft Lyapunov regularization term: $\mathcal{L}_{total} = \mathcal{L}_{PPO} + \lambda \| V(s) - \Phi(s) \|^2$, with $\lambda=0.1$.
+3. **Condition A — Direct Value Learning (Baseline)**:
+   - Standard PPO critic: a 2-layer MLP that outputs $V(s)$ directly, learned entirely from data.
 
-4. **Training Protocol**:
-   - Train all three conditions for 100,000 environment steps across 5 random seeds each.
-   - Use identical actor architecture and all other hyperparameters across conditions.
+4. **Condition B — Structured Value Function**:
+   - The PPO critic is decomposed as $V(s) = \Phi(s) + f_\theta(s)$.
+   - The network outputs only the residual $f_\theta(s)$; the analytic $\Phi(s)$ is added to the output.
+   - **Initialization**: set the final layer weights and biases of $f_\theta$ to zero, so $V(s) \approx \Phi(s)$ at the start of training.
+   - The actor is identical in both conditions; only the critic architecture differs.
+
+5. **Training Protocol**:
+   - Train both conditions for 100,000 environment steps across 5 random seeds each.
+   - Use identical hyperparameters for both conditions.
    - Log episode returns (Lyapunov reward), upright stability, and critic loss at each update.
 
-5. **Absolute Performance Threshold (Sample Efficiency)**:
-   - Replace the "90% of own max" metric with an **absolute return threshold** of −0.5.
-   - Record steps to first consistently exceed this threshold (over a rolling 5-episode window).
-   - This avoids penalizing conditions with higher performance ceilings.
-
-6. **Gradient Monitoring (First 10,000 Steps)**:
-   - For Condition B: log the norm of gradients for $f_\theta$ and the magnitude of the $\alpha \cdot \Phi(s)$ contribution at each update.
-   - Log the value of $\alpha$ throughout training to track whether the prior is retained, amplified, or attenuated.
-
-7. **Value Function Analysis**:
-   - Evaluate $V(s)$ for all three conditions on a 100×100 grid of states ($\theta \in [-\pi, \pi]$, $\dot\theta \in [-8, 8]$).
-   - Plot heatmaps of: (a) analytic $\Phi(s)$, (b) $V_A(s)$, (c) $V_B(s) = \alpha\Phi(s) + f_\theta(s)$, (d) residual $f_\theta(s)$, (e) learned $\alpha$ scalar over training.
+6. **Value Function Analysis**:
+   - Evaluate the learned $V(s)$ for both conditions on a 100×100 grid of states ($\theta \in [-\pi, \pi]$, $\dot\theta \in [-8, 8]$).
+   - Plot heatmaps of: (a) analytic $\Phi(s)$, (b) $V_A(s)$, (c) $V_B(s)$, (d) residual $f_\theta(s)$.
    - Compute MSE between each learned $V(s)$ and $\Phi(s)$ on the grid.
 
+7. **Performance Metrics**:
+   - Learning curves: mean ± std Lyapunov reward over training steps (5 seeds).
+   - Sample efficiency: steps to reach 90% of maximum average reward.
+   - Upright stability: fraction of evaluation steps with $|\theta| < 0.1$ rad.
+
 8. **Statistical Comparison**:
-   - Compare all three conditions on: upright stability (fraction of steps with $|\theta| < 0.1$ rad), steps to absolute threshold, final episode return, and critic convergence.
-   - Report mean ± 95% CI across 5 seeds for each metric.
-   - Assess whether adaptive $\alpha$ (Condition B) or soft regularization (Condition C) is more effective at resolving the bimodal failure mode observed in Iter 1.
+   - Compare Condition A vs. Condition B on all metrics using mean ± std across 5 seeds.
+   - Assess whether the Lyapunov structural prior accelerates critic convergence and improves policy quality.
