@@ -1,0 +1,51 @@
+\documentclass[]{article}
+
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{natbib}
+\usepackage{graphicx} 
+
+
+\begin{document}
+
+\subsection{Policy performance and sample efficiency}
+To evaluate the impact of the Lyapunov-structured critic on policy learning, we first examined the mean episode return throughout training. As shown in Figure \ref{fig:image0}, the learning curves for the standard critic (Condition A) and the structured critic (Condition B) were nearly indistinguishable over the 100,000-step training horizon. Both conditions exhibited a gradual increase in returns during the first 50,000 steps before plateauing at a similar negative mean episode return of approximately -0.78. The variance across the five random seeds was also comparable for both conditions, indicating that the structural prior did not reduce the sensitivity of policy learning to random initialization.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=\columnwidth]{../input_files/plots/step_3_learning_curves_1_1776948522.png}
+    \caption{Smoothed episode return versus environment steps for a standard PPO critic (Condition A) and a critic structured with a Lyapunov prior (Condition B). Curves show the mean ± one standard deviation over five random seeds, with individual seed trajectories overlaid. Both conditions exhibit nearly identical learning trajectories, improving initially before plateauing at a similar negative return value. This suggests that the structural prior in the value function did not lead to a discernible improvement in policy learning speed or final performance within the 100,000-step training horizon.}
+    \label{fig:image0}
+\end{figure}
+
+Consistent with the learning curves, we found no difference in sample efficiency. We defined sample efficiency as the number of steps required to reach 90\% of the maximum smoothed return achieved by a given seed. For all five seeds in both conditions, this value was 100,000 steps, the full training budget. This indicates that neither agent's policy had fully converged within the allotted training time.
+
+Finally, we assessed the quality of the final policies by measuring their ability to stabilize the pendulum in the upright position ($|\theta| < 0.1$ radians) during 10 evaluation rollouts. Both agents performed poorly on this metric. The standard agent (Condition A) maintained an upright position for a mean fraction of $0.0010 \pm 0.0018$ of the timesteps, while the structured agent (Condition B) achieved a fraction of $0.0041 \pm 0.0038$. Although the structured agent's stability was numerically higher, the absolute values are extremely low and the standard deviations are large relative to the means, making the difference practically insignificant. Neither policy learned to reliably stabilize the pendulum.
+
+\subsection{Value function approximation}
+While the structural prior did not translate to improved policy performance within the training horizon, it had a dramatic effect on the critic's learning process and the quality of the final value function approximation. The most direct measure of critic learning is the mean squared error between its value predictions and the GAE-computed returns, which is the loss function the critic minimizes.
+
+\begin{table}[h!]
+\centering
+\caption{Comparison of Critic Training Loss (MSE vs. GAE Returns) between the standard (A) and structured (B) critics.}
+\label{tab:critic_loss}
+\begin{tabular}{lcc}
+\hline
+\hline
+Training Phase & Condition A & Condition B \\
+\hline
+Early (first 20\%) & 5.686 & \textbf{0.733} \\
+Overall Mean & 1.057 & \textbf{0.136} \\
+Final (last 20\%) & \textbf{0.0010} & 0.0029 \\
+\hline
+\end{tabular}
+\end{table}
+
+As summarized in Table \ref{tab:critic_loss}, the Lyapunov-structured critic (Condition B) achieved a substantially lower training loss throughout the learning process. The overall mean loss for Condition B was 0.136, an 87\% reduction compared to the 1.057 loss of the standard critic (Condition A). The benefit was most pronounced in the early stages of training (the first 20\% of updates), where the structured critic's loss was over 8 times lower than the baseline (0.733 vs. 5.686). This demonstrates that the Lyapunov function provides a much better initial estimate of the true value function than a randomly initialized network, significantly accelerating the initial convergence of the critic. By the end of training, both critics converged to very low loss values, with the baseline critic achieving a slightly lower final loss.
+
+To further analyze the learned value functions, we evaluated them on a 100$\times$100 grid of states after training. We compared the learned value functions, $V_A(s)$ and $V_B(s)$, to the analytical Lyapunov function $\Phi(s)$. The Mean Squared Error (MSE) between the standard critic's value function and the Lyapunov function was $\text{MSE}(V_A, \Phi) = 71.98$. In contrast, the structured critic's value function had an MSE of only 10.07, an 86\% reduction. This confirms that the structural prior successfully constrained the learned value function to be much closer to the analytical, energy-based form.
+
+It is important to note that the residual network $f_\theta(s)$ in the structured critic did not converge to zero. The MSE of 10.07 for Condition B is entirely attributable to this learned residual. We found that the mean absolute value of the residual, $|f_\theta(s)|$, across the state grid was approximately 26\% of the mean value of the Lyapunov function $\Phi(s)$. This indicates that the network learned a non-trivial correction to the Lyapunov prior, likely to account for the value function of the agent's suboptimal policy, which deviates from the ideal energy landscape.
+
+\end{document}
+                

@@ -1,0 +1,277 @@
+LaTeX Compilation Errors Found:
+
+! Unable to load picture or PDF file '../input_files/plots/value_function_heatm
+aps.png'.
+<to be read again>
+}
+l.32 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Package graphics Error: Division by 0.
+
+See the graphics package documentation for explanation.
+Type  H <return>  for immediate help.
+...
+
+l.32 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Emergency stop.
+...
+
+l.32 ...t_files/plots/value_function_heatmaps.png}
+
+Output written on Results_refined.pdf (1 page).
+Transcript written on Results_refined.log.
+---- STDERR ----
+---- STDOUT ----
+This is XeTeX, Version 3.141592653-2.6-0.999994 (TeX Live 2022/Debian) (preloaded format=xelatex)
+restricted \write18 enabled.
+entering extended mode
+
+! Unable to load picture or PDF file '../input_files/plots/value_function_heatm
+aps.png'.
+<to be read again>
+}
+l.32 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Package graphics Error: Division by 0.
+
+See the graphics package documentation for explanation.
+Type  H <return>  for immediate help.
+...
+
+l.32 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Emergency stop.
+...
+
+l.32 ...t_files/plots/value_function_heatmaps.png}
+
+Output written on Results_refined_v1.pdf (1 page).
+Transcript written on Results_refined_v1.log.
+---- STDERR ----
+---- STDOUT ----
+This is XeTeX, Version 3.141592653-2.6-0.999994 (TeX Live 2022/Debian) (preloaded format=xelatex)
+restricted \write18 enabled.
+entering extended mode
+
+! Unable to load picture or PDF file '../input_files/plots/value_function_heatm
+aps.png'.
+<to be read again>
+}
+l.32 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Package graphics Error: Division by 0.
+
+See the graphics package documentation for explanation.
+Type  H <return>  for immediate help.
+...
+
+l.32 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Emergency stop.
+...
+
+l.32 ...t_files/plots/value_function_heatmaps.png}
+
+Output written on Results_refined_v2.pdf (1 page).
+Transcript written on Results_refined_v2.log.
+---- STDERR ----
+---- STDOUT ----
+This is XeTeX, Version 3.141592653-2.6-0.999994 (TeX Live 2022/Debian) (preloaded format=xelatex)
+restricted \write18 enabled.
+entering extended mode
+
+! Unable to load picture or PDF file '../input_files/plots/value_function_heatm
+aps.png'.
+<to be read again>
+}
+l.32 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Package graphics Error: Division by 0.
+
+See the graphics package documentation for explanation.
+Type  H <return>  for immediate help.
+...
+
+l.32 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Emergency stop.
+...
+
+l.32 ...t_files/plots/value_function_heatmaps.png}
+
+Output written on Results_refined_v3.pdf (1 page).
+Transcript written on Results_refined_v3.log.
+---- STDERR ----
+---- STDOUT ----
+This is XeTeX, Version 3.141592653-2.6-0.999994 (TeX Live 2022/Debian) (preloaded format=xelatex)
+restricted \write18 enabled.
+entering extended mode
+
+! Unable to load picture or PDF file '../input_files/plots/value_function_heatm
+aps.png'.
+<to be read again>
+}
+l.34 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Package graphics Error: Division by 0.
+
+See the graphics package documentation for explanation.
+Type  H <return>  for immediate help.
+...
+
+l.34 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Emergency stop.
+...
+
+l.34 ...t_files/plots/value_function_heatmaps.png}
+
+Output written on Results_refined.pdf (1 page).
+Transcript written on Results_refined.log.
+---- STDERR ----
+---- STDOUT ----
+This is XeTeX, Version 3.141592653-2.6-0.999994 (TeX Live 2022/Debian) (preloaded format=xelatex)
+restricted \write18 enabled.
+entering extended mode
+
+! Unable to load picture or PDF file '../input_files/plots/value_function_heatm
+aps.png'.
+<to be read again>
+}
+l.34 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Package graphics Error: Division by 0.
+
+See the graphics package documentation for explanation.
+Type  H <return>  for immediate help.
+...
+
+l.34 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Emergency stop.
+...
+
+l.34 ...t_files/plots/value_function_heatmaps.png}
+
+Output written on Results_refined_v1.pdf (1 page).
+Transcript written on Results_refined_v1.log.
+---- STDERR ----
+---- STDOUT ----
+This is XeTeX, Version 3.141592653-2.6-0.999994 (TeX Live 2022/Debian) (preloaded format=xelatex)
+restricted \write18 enabled.
+entering extended mode
+
+! Unable to load picture or PDF file '../input_files/plots/value_functions_heat
+maps.png'.
+<to be read again>
+}
+l.34 ..._files/plots/value_functions_heatmaps.png}
+
+?
+
+! Package graphics Error: Division by 0.
+
+See the graphics package documentation for explanation.
+Type  H <return>  for immediate help.
+...
+
+l.34 ..._files/plots/value_functions_heatmaps.png}
+
+?
+
+! Emergency stop.
+...
+
+l.34 ..._files/plots/value_functions_heatmaps.png}
+
+Output written on Results_refined_v2.pdf (1 page).
+Transcript written on Results_refined_v2.log.
+---- STDERR ----
+---- STDOUT ----
+This is XeTeX, Version 3.141592653-2.6-0.999994 (TeX Live 2022/Debian) (preloaded format=xelatex)
+restricted \write18 enabled.
+entering extended mode
+
+! Unable to load picture or PDF file '../input_files/plots/value_function_heatm
+aps.png'.
+<to be read again>
+}
+l.34 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Package graphics Error: Division by 0.
+
+See the graphics package documentation for explanation.
+Type  H <return>  for immediate help.
+...
+
+l.34 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Emergency stop.
+...
+
+l.34 ...t_files/plots/value_function_heatmaps.png}
+
+Output written on Results_refined_v3.pdf (1 page).
+Transcript written on Results_refined_v3.log.
+---- STDERR ----
+---- STDOUT ----
+This is XeTeX, Version 3.141592653-2.6-0.999994 (TeX Live 2022/Debian) (preloaded format=xelatex)
+restricted \write18 enabled.
+entering extended mode
+
+! Unable to load picture or PDF file '../input_files/plots/value_function_heatm
+aps.png'.
+<to be read again>
+}
+l.34 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Package graphics Error: Division by 0.
+
+See the graphics package documentation for explanation.
+Type  H <return>  for immediate help.
+...
+
+l.34 ...t_files/plots/value_function_heatmaps.png}
+
+?
+
+! Emergency stop.
+...
+
+l.34 ...t_files/plots/value_function_heatmaps.png}
+
+Output written on Results_refined.pdf (1 page).
+Transcript written on Results_refined.log.
+---- STDERR ----
+

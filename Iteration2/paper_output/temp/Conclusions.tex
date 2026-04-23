@@ -1,0 +1,20 @@
+\documentclass[]{article}
+
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{natbib}
+\usepackage{graphicx} 
+
+
+\begin{document}
+
+This paper investigated the challenge of sample inefficiency in deep reinforcement learning for continuous control, focusing on the difficulty of learning accurate value functions from scratch. We proposed and evaluated a method to accelerate critic learning by incorporating control-theoretic domain knowledge. This was achieved by structuring the critic's value function as the sum of a known, analytical Lyapunov function and a learned neural network residual.
+
+Our methodology involved applying the Proximal Policy Optimization (PPO) algorithm to the Gymnasium Pendulum-v1 stabilization task. To align the learning objective with the control goal, we defined the reward signal as the decrease in the system's energy, as described by the Lyapunov function. We then compared the performance of a standard PPO agent against an agent equipped with our proposed Lyapunov-structured critic over a 100,000-step training horizon.
+
+The results demonstrated a clear and significant benefit of the structural prior on the critic's learning process. The Lyapunov-structured critic achieved an 87\% lower overall training loss and converged substantially faster, particularly in the early stages of training where its loss was 8 times lower than the baseline. Furthermore, the final learned value function was 86\% closer to the analytical Lyapunov function, confirming that the prior effectively guided the approximation. However, these dramatic improvements in value function approximation did not translate into superior policy performance or sample efficiency. The learning curves and final policy stability metrics were nearly identical for both agents, and neither learned to reliably stabilize the pendulum within the given training budget.
+
+From these findings, we conclude that incorporating a Lyapunov function as a structural prior is a highly effective technique for accelerating the convergence of the value function in an actor-critic framework. It provides a strong, physically-meaningful initial estimate that the neural network only needs to refine. However, we also learned that for on-policy algorithms like PPO, rapid critic convergence does not guarantee a corresponding acceleration in policy improvement, at least not on shorter training horizons. The policy update mechanism may represent a separate bottleneck that requires more extensive environment interaction to leverage the more accurate value estimates provided by the structured critic. This suggests a potential decoupling between the learning speeds of the actor and the critic, a factor that warrants further investigation in the pursuit of more sample-efficient reinforcement learning.
+
+\end{document}
+                

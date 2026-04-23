@@ -1,0 +1,54 @@
+\documentclass[]{article}
+
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{natbib}
+\usepackage{graphicx} 
+
+
+\begin{document}
+
+\subsection{Environment and task formulation}
+All experiments were conducted using the \texttt{Pendulum-v1} environment from the Gymnasium library. The task is to swing up an underactuated pendulum and stabilize it in the upright position. The state is represented by $s = [\cos\theta, \sin\theta, \dot\theta]$, where $\theta$ is the angle from the vertical upright position and $\dot\theta$ is the angular velocity. The action is a continuous torque applied to the pendulum's joint.
+
+To align the reinforcement learning objective with the control-theoretic goal of stabilization, we replaced the environment's default reward function with a custom reward signal derived from a Lyapunov function. The Lyapunov function, representing the mechanical energy of the pendulum relative to the upright equilibrium, is defined as:
+\begin{equation}
+\Phi(s) = (1 - \cos\theta) + 0.5\dot\theta^2
+\end{equation}
+The reward at each timestep $t$ is then defined as the decrease in this energy function:
+\begin{equation}
+R_t = \Phi(s_t) - \Phi(s_{t+1})
+\end{equation}
+This formulation incentivizes the agent to find policies that consistently reduce the system's energy, thereby driving the state towards the stable equilibrium at $(\theta, \dot\theta) = (0, 0)$. Episodes were terminated after 200 timesteps.
+
+\subsection{Reinforcement learning algorithm}
+We employed the Proximal Policy Optimization (PPO) algorithm, an on-policy actor-critic method. The actor (policy) and critic (value function) were implemented as separate neural networks, each consisting of two fully-connected hidden layers with 64 units and Tanh activation functions. The actor network outputs the mean and standard deviation of a Gaussian policy.
+
+Training was performed using a learning rate of $3 \times 10^{-4}$ for both networks. Key PPO hyperparameters were held constant across all experiments: a discount factor $\gamma = 0.99$, a Generalized Advantage Estimation (GAE) parameter $\lambda = 0.95$, a clipping ratio $\epsilon = 0.2$, and an entropy coefficient of $0.01$. Data was collected in rollouts of 2048 steps, and for each rollout, the networks were updated for 4 epochs using minibatches of size 64.
+
+\subsection{Value function architectures}
+To investigate the impact of incorporating a control-theoretic prior, we compared two distinct critic architectures. The actor architecture was identical in both conditions.
+
+\subsubsection{Baseline critic}
+The baseline condition (Condition A) utilized a standard PPO critic. The neural network was trained to directly approximate the state-value function $V(s)$ by minimizing the error between its predictions and the empirical returns computed from environment interaction.
+
+\subsubsection{Lyapunov-structured critic}
+The experimental condition (Condition B) employed a critic with a structured value function. The value function was decomposed into a known analytical component and a learned residual component:
+\begin{equation}
+V(s) = \Phi(s) + f_\theta(s)
+\end{equation}
+Here, $\Phi(s)$ is the fixed, non-trainable analytical Lyapunov function defined in Equation (1), and $f_\theta(s)$ is the output of a neural network with the same architecture as the baseline critic. The network is trained only to learn the residual correction $f_\theta(s)$, effectively using the Lyapunov function as a physically-informed baseline for the value estimate.
+
+\subsection{Training and evaluation}
+Both conditions were trained for a total of 100,000 environment steps. To account for stochasticity, we conducted 5 independent training runs for each condition, each with a different random seed.
+
+We evaluated performance using several metrics:
+\begin{itemize}
+    \item \textbf{Learning Curves:} We tracked the mean episode return (the sum of Lyapunov-based rewards over an episode) as a function of training steps, smoothed over a rolling window of 10 episodes.
+    \item \textbf{Critic Loss:} We measured the mean squared error between the critic's value predictions and the GAE-computed returns at each training update. This metric directly quantifies the critic's learning progress.
+    \item \textbf{Value Function Analysis:} After training, we evaluated the learned value functions from a representative seed on a 100$\times$100 grid of states spanning $\theta \in [-\pi, \pi]$ and $\dot\theta \in [-8, 8]$. We computed the Mean Squared Error (MSE) between each learned value function and the analytical Lyapunov function $\Phi(s)$ over this grid.
+    \item \textbf{Upright Stability:} To assess final policy quality, we performed 10 evaluation rollouts per seed using the deterministic policy (i.e., taking the mean of the policy's action distribution). We measured stability as the fraction of timesteps in these rollouts where the pendulum was near the upright position. This was defined by $|\theta| < 0.1$ radians, where the angle $\theta$ was recovered from the state vector using the \texttt{atan2} function.
+\end{itemize}
+
+\end{document}
+                

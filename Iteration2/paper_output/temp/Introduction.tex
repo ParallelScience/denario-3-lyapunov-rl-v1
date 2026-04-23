@@ -1,0 +1,20 @@
+\documentclass[]{article}
+
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{natbib}
+\usepackage{graphicx} 
+
+
+\begin{document}
+
+Deep reinforcement learning has emerged as a powerful paradigm for solving complex sequential decision-making problems. However, its application to continuous control tasks, particularly in robotics and physical systems, is often hampered by substantial sample inefficiency. A primary contributor to this challenge is the difficulty of learning an accurate value function, which estimates the expected long-term return from a given state and guides policy improvement. In standard implementations, the value function is approximated by a neural network trained from scratch. This \textit{tabula rasa} approach disregards available domain knowledge, forcing the agent to discover the underlying dynamics and task structure through extensive and often costly trial-and-error interaction with the environment.
+
+In contrast, classical control theory provides a mature framework for analyzing and controlling dynamical systems, often leveraging analytical models. Lyapunov stability theory, in particular, offers a rigorous method for certifying system stability around an equilibrium point. This is achieved through a Lyapunov function: a scalar, energy-like function of the system's state that is positive definite and decreases along all system trajectories. The existence of such a function provides a formal guarantee of convergence to the equilibrium. For many physical systems, an analytical Lyapunov function can be derived from first principles, representing a potent piece of prior knowledge about the system's behavior.
+
+The objective of a Lyapunov function—to decrease towards a minimum at a stable equilibrium—bears a strong conceptual resemblance to the optimal value function in a reinforcement learning stabilization task. This parallel suggests a promising opportunity to fuse the strengths of both domains: using a known Lyapunov function as a structural prior to guide the value function learning process. Instead of requiring a neural network to learn the entire value landscape from a random initialization, we can initialize it with a physically meaningful approximation. The learning problem is thereby reframed from discovering the full function to learning a smaller, potentially simpler residual correction that accounts for model inaccuracies or complex dynamics not captured by the analytical form.
+
+In this work, we investigate this hypothesis by structuring the critic's value function as the sum of a known analytic Lyapunov function and a learned neural network residual. We formalize this decomposition as $V(s) = \Phi(s) + f_\theta(s)$, where $\Phi(s)$ is the pre-defined Lyapunov function and $f_\theta(s)$ is the output of the neural network. To align the reinforcement learning objective with the control-theoretic goal of stabilization, we define the reward signal as the decrease in the Lyapunov function between steps, $R_t = \Phi(s_t) - \Phi(s_{t+1})$. We implement this approach using the Proximal Policy Optimization (PPO) algorithm on the classic pendulum swing-up and stabilization task. By comparing an agent with this Lyapunov-structured critic against a standard PPO baseline, we aim to quantify the impact of this structural prior on the convergence speed of the value function approximation and to assess whether accelerated critic learning translates into improved final policy performance.
+
+\end{document}
+                
