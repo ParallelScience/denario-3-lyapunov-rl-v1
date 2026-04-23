@@ -1,0 +1,8 @@
+{
+  "primary_category": "cs.LG",
+  "secondary_categories": [
+    "cs.RO",
+    "cs.SY"
+  ],
+  "justification": "The paper focuses on reinforcement learning (cs.LG) applied to a control task (pendulum stabilization), which involves robotics (cs.RO) and control theory (cs.SY) principles."
+}

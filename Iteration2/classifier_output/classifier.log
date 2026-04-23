@@ -1,0 +1,131 @@
+
+###### PROMPT BEGINS ########
+Human: You are a scientific paper classifier. Your task is to determine the most appropriate top-level arXiv archive for the following paper.
+
+**Paper Title:** Accelerating Critic Learning via Lyapunov-Structured Value Functions for Reinforcement Learning
+
+**Abstract:** Learning accurate value functions from scratch is a key challenge contributing to the sample inefficiency of deep reinforcement learning in continuous control. To address this, we investigate incorporating control-theoretic priors by structuring the critic's value function as the sum of a known analytic Lyapunov function and a learned neural network residual. We evaluated this approach using the Proximal Policy Optimization (PPO) algorithm on the Gymnasium Pendulum-v1 stabilization task, comparing a standard agent against one with the Lyapunov-structured critic. Our results show that the structured critic converged substantially faster, achieving an 87\% lower overall training loss and an 8-fold reduction in loss during early training compared to the baseline. Furthermore, the resulting value function was 86\% closer to the analytic Lyapunov function. However, these significant improvements in value function approximation did not translate into superior policy performance or sample efficiency within the 100,000-step training horizon, as neither agent learned a stable policy. These findings suggest that while Lyapunov structural priors can dramatically accelerate value function convergence, the realization of corresponding policy improvements in on-policy algorithms may require a more extensive training budget.
+
+**Archives:**
+- astro-ph: Astrophysics — cosmology, galaxies, stellar physics, planetary science, high-energy astrophysics, instrumentation
+- cond-mat: Condensed Matter — materials science, superconductivity, quantum gases, soft matter, statistical mechanics
+- cs: Computer Science — AI, machine learning, NLP, computer vision, algorithms, networking, security, software
+- econ: Economics — econometrics, general economics, theoretical economics
+- eess: Electrical Engineering and Systems Science — signal processing, image/video processing, audio/speech, control
+- gr-qc: General Relativity and Quantum Cosmology — gravitational physics, gravitational waves, black holes
+- hep-ex: High Energy Physics - Experiment — particle physics experiments, collider results
+- hep-lat: High Energy Physics - Lattice — lattice field theory, lattice QCD
+- hep-ph: High Energy Physics - Phenomenology — theoretical particle physics connected to experiment
+- hep-th: High Energy Physics - Theory — string theory, quantum field theory, supersymmetry
+- math: Mathematics — algebra, geometry, topology, analysis, probability, number theory, optimization
+- math-ph: Mathematical Physics — mathematical methods for physics problems
+- nlin: Nonlinear Sciences — chaos, pattern formation, solitons, integrable systems, self-organization
+- nucl-ex: Nuclear Experiment — experimental nuclear physics
+- nucl-th: Nuclear Theory — nuclear structure theory, hadron models, neutron stars
+- physics: Physics (General) — classical, computational, fluid dynamics, optics, plasma, applied, biological, chemical physics
+- q-bio: Quantitative Biology — biomolecules, genomics, neuroscience, populations, quantitative methods
+- q-fin: Quantitative Finance — computational finance, portfolio management, risk, pricing, trading
+- quant-ph: Quantum Physics — quantum information, computation, entanglement, foundations, optics
+- stat: Statistics — methodology, applications, machine learning (with statistical grounding), computation
+
+Select the single most appropriate archive for this paper. If the paper spans multiple fields, choose the one where the paper makes its primary contribution.
+
+###### PROMPT ENDS ########
+
+archive='cs' justification='The paper focuses on reinforcement learning and neural network architecture, which are core topics within the computer science and machine learning domain.'
+###### PROMPT BEGINS ########
+Human: You are a scientific paper classifier. You have already determined that this paper belongs to the **cs** archive on arXiv. Now select the specific subcategory.
+
+**Paper Title:** Accelerating Critic Learning via Lyapunov-Structured Value Functions for Reinforcement Learning
+
+**Abstract:** Learning accurate value functions from scratch is a key challenge contributing to the sample inefficiency of deep reinforcement learning in continuous control. To address this, we investigate incorporating control-theoretic priors by structuring the critic's value function as the sum of a known analytic Lyapunov function and a learned neural network residual. We evaluated this approach using the Proximal Policy Optimization (PPO) algorithm on the Gymnasium Pendulum-v1 stabilization task, comparing a standard agent against one with the Lyapunov-structured critic. Our results show that the structured critic converged substantially faster, achieving an 87\% lower overall training loss and an 8-fold reduction in loss during early training compared to the baseline. Furthermore, the resulting value function was 86\% closer to the analytic Lyapunov function. However, these significant improvements in value function approximation did not translate into superior policy performance or sample efficiency within the 100,000-step training horizon, as neither agent learned a stable policy. These findings suggest that while Lyapunov structural priors can dramatically accelerate value function convergence, the realization of corresponding policy improvements in on-policy algorithms may require a more extensive training budget.
+
+**Methods (if available):** \subsection{Environment and task formulation}
+All experiments were conducted using the \texttt{Pendulum-v1} environment from the Gymnasium library. The task is to swing up an underactuated pendulum and stabilize it in the upright position. The state is represented by $s = [\cos\theta, \sin\theta, \dot\theta]$, where $\theta$ is the angle from the vertical upright position and $\dot\theta$ is the angular velocity. The action is a continuous torque applied to the pendulum's joint.
+
+To align the reinforcement learning objective with the control-theoretic goal of stabilization, we replaced the environment's default reward function with a custom reward signal derived from a Lyapunov function. The Lyapunov function, representing the mechanical energy of the pendulum relative to the upright equilibrium, is defined as:
+\begin{equation}
+\Phi(s) = (1 - \cos\theta) + 0.5\dot\theta^2
+\end{equation}
+The reward at each timestep $t$ is then defined as the decrease in this energy function:
+\begin{equation}
+R_t = \Phi(s_t) - \Phi(s_{t+1})
+\end{equation}
+This formulation incentivizes the agent to find policies that consistently reduce the system's energy, thereby driving the state towards the stable equilibrium at $(\theta, \dot\theta) = (0, 0)$. Episodes were terminated after 200 timesteps.
+
+\subsection{Reinforcement learning algorithm}
+We employed the Proximal Policy Optimization (PPO) algorithm, an on-policy actor-critic method. The actor (policy) and critic (value function) were implemented as separate neural networks, each consisting of two fully-connected hidden layers with 64 units and Tanh activation functions. The actor network outputs the mean and standard deviation of a Gaussian policy.
+
+Training was performed using a learning rate of $3 \times 10^{-4}$ for both networks. Key PPO hyperparameters were held constant across all experiments: a discount factor $\gamma = 0.99$, a Generalized Advantage Estimation (GAE) parameter $\lambda = 0.95$, a clipping ratio $\epsilon = 0.2$, and an entropy coefficient of $0.01$. Data was collected in rollouts of 2048 steps, and for each rollout, the networks were updated for 4 epochs using minibatches of size 64.
+
+\subsection{Value function architectures}
+To investigate the impact of incorporating a control-theoretic prior, we compared two distinct critic architectures. The actor architecture was identical in both conditions.
+
+\subsubsection{Baseline critic}
+The baseline condition (Condition A) utilized a standard PPO critic. The neural network was trained to directly approximate the state-value function $V(s)$ by minimizing the error between its predictions and the empirical returns computed from environment interaction.
+
+\subsubsection{Lyapunov-structured critic}
+The experimental condition (Condition B) employed a critic with a structured value function. The value function was decomposed into a known analytical component and a learned residual component:
+\begin{equation}
+V(s) = \Phi(s) + f_\theta(s)
+\end{equation}
+Here, $\Phi(s)$ is the fixed, non-trainable analytical Lyapunov function defined in Equation (1), and $f_\theta(s)$ is the output of a neural network with the same architecture as the baseline critic. The network is trained only to learn the residual correction $f_\theta(s)$, effectively using the Lyapunov function as a physically-informed baseline for the value estimate.
+
+\subsection{Training and evaluation}
+Both conditions were trained for a total of 100,000 environment steps. To account for stochasticity, we conducted 5 independent training runs for each condition, each with a different random seed.
+
+We evaluated performance using several metrics:
+\begin{itemize}
+    \item \textbf{Learning Curves:} We tracked the mean episode return (the sum of Lyapunov-based rewards over an episode) as a function of training steps, smoothed over a rolling window of 10 episodes.
+    \item \textbf{Critic Loss:} We measured the mean squared error between the critic's value predictions and the GAE-computed returns at each training update. This metric directly quantifies the critic's learning progress.
+    \item \textbf{Value Function Analysis:} After training, we evaluated the learned value functions from a representative seed on a 100$\times$100 grid of states spanning $\theta \in [-\pi, \pi]$ and $\dot\theta \in [-8, 8]$. We computed the Mean Squared Error (MSE) between each learned value function and the analytical Lyapunov function $\Phi(s)$ over this grid.
+    \item \textbf{Upright Stability:} To assess final policy quality, we performed 10 evaluation rollouts per seed using the deterministic policy (i.e., taking the mean of the policy's action distribution). We measured stability as the fraction of timesteps in these rollouts where the pendulum was near the upright position. This was defined by $|\theta| < 0.1$ radians, where the angle $\theta$ was recovered from the state vector using the \texttt{atan2} function.
+\end{itemize}
+
+**Available subcategories in cs:**
+- cs.AI: Artificial Intelligence — Covers all areas of AI except Vision, Robotics, Machine Learning, Multiagent Systems, and Computation and Language, which have separate categories.
+- cs.AR: Hardware Architecture — Covers systems organization and hardware architecture, including digital logic, processor design, memory systems.
+- cs.CC: Computational Complexity — Covers models of computation, complexity classes, structural complexity, complexity tradeoffs, upper and lower bounds.
+- cs.CE: Computational Engineering, Finance, and Science — Covers applications of computer science to the mathematical modeling of complex systems in science, engineering, and finance.
+- cs.CG: Computational Geometry — Covers geometric algorithms, computational methods for spatial problems, mesh generation, shape analysis.
+- cs.CL: Computation and Language — Covers natural language processing, computational linguistics, speech recognition, text generation, machine translation.
+- cs.CR: Cryptography and Security — Covers all areas of cryptography and security including authentication, public key cryptosystems, proof-carrying code.
+- cs.CV: Computer Vision and Pattern Recognition — Covers image processing, computer vision, pattern recognition, and scene understanding.
+- cs.CY: Computers and Society — Covers impact of computers on society, computer ethics, information technology and public policy, legal issues.
+- cs.DB: Databases — Covers database management, datamining, and data processing, query languages, indexing.
+- cs.DC: Distributed, Parallel, and Cluster Computing — Covers fault-tolerance, distributed algorithms, stability, parallel computation, and cluster computing.
+- cs.DL: Digital Libraries — Covers all aspects of the digital library design and document and text creation.
+- cs.DM: Discrete Mathematics — Covers combinatorics, graph theory, applications of probability in discrete structures.
+- cs.DS: Data Structures and Algorithms — Covers data structures and analysis of algorithms, sorting, searching, graph algorithms.
+- cs.ET: Emerging Technologies — Covers approaches to information processing based on alternatives to silicon CMOS-based technologies, including quantum computing, DNA computing.
+- cs.FL: Formal Languages and Automata Theory — Covers automata theory, formal language theory, grammars, and combinatorics on words.
+- cs.GL: General Literature — Covers introductory material, survey material, predictions of future trends, biographies.
+- cs.GR: Graphics — Covers all aspects of computer graphics, rendering, modeling, animation.
+- cs.GT: Computer Science and Game Theory — Covers all theoretical and applied aspects at the intersection of computer science and game theory, mechanism design, auction theory.
+- cs.HC: Human-Computer Interaction — Covers human factors, user interfaces, and collaborative computing.
+- cs.IR: Information Retrieval — Covers indexing, dictionaries, retrieval, content and analysis, search engines, web search.
+- cs.IT: Information Theory — Covers theoretical and experimental aspects of information theory and coding, data compression, channel capacity.
+- cs.LG: Machine Learning — Papers on all aspects of machine learning research including supervised, unsupervised, reinforcement learning, deep learning, representation learning.
+- cs.LO: Logic in Computer Science — Covers all aspects of logic in computer science, including finite model theory, logics of programs, modal logic, model checking.
+- cs.MA: Multiagent Systems — Covers multiagent systems, distributed artificial intelligence, intelligent agents, coordinated interactions, multi-robot systems.
+- cs.MM: Multimedia — Covers multimedia computing applications and technologies, media processing.
+- cs.MS: Mathematical Software — Covers development and analysis of algorithms for mathematical software, numerical libraries.
+- cs.NA: Numerical Analysis — Covers numerical methods, scientific computing, computational mathematics.
+- cs.NE: Neural and Evolutionary Computing — Covers neural networks, connectionism, genetic algorithms, artificial life, adaptive behavior, evolutionary computation.
+- cs.NI: Networking and Internet Architecture — Covers all aspects of computer communication networks, including network architecture and design, protocols, routing.
+- cs.OH: Other Computer Science — Classification for documents that do not fit anywhere else in computer science.
+- cs.OS: Operating Systems — Covers system software for resource management, process control, scheduling.
+- cs.PF: Performance — Covers performance measurement and evaluation, queueing, and simulation.
+- cs.PL: Programming Languages — Covers programming language semantics, language features, programming approaches, type systems, compilers.
+- cs.RO: Robotics — Covers robot design, control, planning, perception, manipulation, locomotion.
+- cs.SC: Symbolic Computation — Covers mathematical symbolic manipulation, computer algebra systems.
+- cs.SD: Sound — Covers all aspects of computing with sound, and sound as an information channel, audio processing.
+- cs.SE: Software Engineering — Covers design tools, software metrics, testing and debugging, programming environments, software development methodologies.
+- cs.SI: Social and Information Networks — Covers the design, analysis, and modeling of social and information networks, including online social networks, viral propagation.
+- cs.SY: Systems and Control — Covers theoretical and experimental research on all facets of automatic control systems, including linear and nonlinear control.
+
+Select one primary subcategory and up to 3 secondary subcategories (from any archive) that also apply. The primary must be from the list above. Secondary categories may come from any arXiv category if the paper is interdisciplinary.
+
+###### PROMPT ENDS ########
+
+primary_category='cs.LG' secondary_categories=['cs.RO', 'cs.SY'] justification='The paper focuses on reinforcement learning (cs.LG) applied to a control task (pendulum stabilization), which involves robotics (cs.RO) and control theory (cs.SY) principles.'
